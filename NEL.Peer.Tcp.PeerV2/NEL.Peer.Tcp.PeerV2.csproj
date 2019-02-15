@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NEL.common\NEL.Common.csproj" />
+    <ProjectReference Include="..\NEL.Peer.Tcp.Interface\NEL.Peer.Tcp.Interface.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,5 @@
+﻿{
+  "port": 8080,
+  "bindAddress": "0.0.0.0",
+  "server_storage_path": "./rocksdb"
+}
