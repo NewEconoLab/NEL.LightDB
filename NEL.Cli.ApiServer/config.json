@@ -1,0 +1,7 @@
+﻿{
+  "port": 80,
+  "bindAddress": "0.0.0.0",
+  "dbServerPort": 8080,
+  "dbServerAddress": "127.0.0.1",
+  "dbServerPath": "server"
+}

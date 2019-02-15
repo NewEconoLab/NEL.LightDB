@@ -28,10 +28,13 @@ namespace NEL.Cli.ApiServer
     {
         private IWebHost host;
 
+        private Setting setting;
+
         private IModulePipeline actor;
 
         public RpcServerModule()
         {
+            setting = new Setting();
         }
 
         private ConcurrentDictionary<string, ConcurrentQueue<JObject>> dic = new ConcurrentDictionary<string, ConcurrentQueue<JObject>>();
@@ -140,7 +143,6 @@ namespace NEL.Cli.ApiServer
             {
                 services.AddResponseCompression(options =>
                 {
-                    // options.EnableForHttps = false;
                     options.Providers.Add<GzipCompressionProvider>();
                     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/json-rpc" });
                 });
@@ -187,9 +189,9 @@ namespace NEL.Cli.ApiServer
         public override void OnStart()
         {
             //开启rpc服务
-            Start(IPAddress.Parse("0.0.0.0"),20338);
+            Start(IPAddress.Parse(setting.BindAddress),setting.Port);
             //链接数据库服务器
-            actor= this.GetPipeline("127.0.0.1:8080/server");
+            actor= this.GetPipeline(string.Format("{0}:{1}/{2}",setting.DBServerAddress,setting.DBServerPort,setting.DBServerPath));
         }
 
         public override void OnTell(IModulePipeline from, byte[] data)
@@ -207,7 +209,7 @@ namespace NEL.Cli.ApiServer
         private void ProcessSend(JObject request)
         {
             if(!actor.IsVaild) //以防数据库服务挂了
-                actor = this.GetPipeline("127.0.0.1:8080/server");
+                actor = this.GetPipeline(string.Format("{0}:{1}/{2}", setting.DBServerAddress, setting.DBServerPort, setting.DBServerPath));
 
             string method = request["method"].AsString();
             string host = request["host"].AsString();
@@ -225,7 +227,8 @@ namespace NEL.Cli.ApiServer
                         ScriptHash = script_hash,
                         Key = key
                     };
-                    NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue", method, host, id);
+                    Identity identity = new Identity(host,method,id);
+                    NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue", identity.ToString());
                     netMessage.Params["tableid"] = new byte[] { };
                     netMessage.Params["key"] = (new byte[] { 0x70 }).Concat(storageKey.ToArray()).ToArray();
                     actor.Tell(netMessage.ToBytes());
@@ -240,18 +243,18 @@ namespace NEL.Cli.ApiServer
             using (MemoryStream ms = new MemoryStream(data))
             {
                 NetMessage netMsg = NetMessage.Unpack(ms);
-                if (netMsg.Fmd == "getstorage.back")
+                Identity identity = Identity.ToIdentity(netMsg.ID);
+                if (identity.Mehotd == "getstorage")
                 {
-                    string host = netMsg.Host;
-                    string method = netMsg.Fmd.Split('.')[0];
-                    JObject response = CreateResponse(netMsg.id);
+                    string key = identity.Host + identity.Mehotd;
+                    JObject response = CreateResponse(identity.ID);
                     response["result"] = DBValue.FromRaw(netMsg.Params["data"]).value.AsSerializable<StorageItem>().Value.ToHexString();
-                    if (dic.ContainsKey(host + method))
-                        dic[host + method].Enqueue(response);
+                    if (dic.ContainsKey(key))
+                        dic[key].Enqueue(response);
                     else
                     {
-                        dic.TryAdd(host + method, new ConcurrentQueue<JObject>());
-                        dic[host + method].Enqueue(response);
+                        dic.TryAdd(key, new ConcurrentQueue<JObject>());
+                        dic[key].Enqueue(response);
                     }
                 }
             }

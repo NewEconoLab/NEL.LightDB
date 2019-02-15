@@ -11,15 +11,14 @@ namespace NEL.SimpleDB.Server
         static void Main(string[] args)
         {
             //初始化配置
-            new Setting();
+            var setting = new Setting();
             Logger logger = new Logger();
             //初始化db
-            new StorageService();
-            Console.WriteLine(StorageService.state_DBOpen);
+            new StorageService(setting);
             //开启服务
             ISystem systemL = PipelineSystem.CreatePipelineSystemV1(logger);
             systemL.OpenNetwork(new PeerOption());
-            systemL.OpenListen(new IPEndPoint(IPAddress.Parse(Setting.BindAddress), Setting.Port));
+            systemL.OpenListen(new IPEndPoint(IPAddress.Parse(setting.BindAddress), setting.Port));
             systemL.RegistModule("server",new ServerModule());
             systemL.Start();
             Console.ReadKey();

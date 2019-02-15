@@ -24,4 +24,10 @@
     <ProjectReference Include="..\NEL.SimpleDB\NEL.SimpleDB.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

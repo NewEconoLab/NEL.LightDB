@@ -16,19 +16,7 @@ namespace NEL.Simple.SDK
             private set;
         }
 
-        public string Fmd
-        {
-            get;
-            private set;
-        }
-
-        public string Host
-        {
-            get;
-            private set;
-        }
-
-        public string id
+        public string ID //加一个id 用来放发送者的一些身份信息
         {
             get;
             private set;
@@ -40,13 +28,10 @@ namespace NEL.Simple.SDK
             private set;
         }
 
-        public static NetMessage Create(string cmd,string fmd="",string host = "",string id = "")
+        public static NetMessage Create(string cmd,string identity = "")
         {
             var msg = new NetMessage();
-            msg.Cmd = cmd;
-            msg.Fmd = fmd;
-            msg.Host = host;
-            msg.id = id;
+            msg.ID = identity;
             msg.Params = new Dictionary<string, byte[]>();
             return msg;
         }
@@ -62,9 +47,7 @@ namespace NEL.Simple.SDK
         public void Pack(System.IO.Stream stream)
         {
             var strbuf = System.Text.Encoding.UTF8.GetBytes(this.Cmd);
-            var fmdbuf = System.Text.Encoding.UTF8.GetBytes(this.Fmd);
-            var hostbuf = System.Text.Encoding.UTF8.GetBytes(this.Host);
-            var idbuf = System.Text.Encoding.UTF8.GetBytes(this.id);
+            var idbuf = System.Text.Encoding.UTF8.GetBytes(this.ID);
             if (strbuf.Length > 255)
                 throw new Exception("too long cmd.");
             if (Params.Count > 255)
@@ -76,12 +59,6 @@ namespace NEL.Simple.SDK
                 {
                     ms.WriteByte((byte)strbuf.Length);
                     ms.Write(strbuf, 0, strbuf.Length);
-
-                    ms.WriteByte((byte)fmdbuf.Length);
-                    ms.Write(fmdbuf, 0, fmdbuf.Length);
-
-                    ms.WriteByte((byte)hostbuf.Length);
-                    ms.Write(hostbuf, 0, hostbuf.Length);
 
                     ms.WriteByte((byte)idbuf.Length);
                     ms.Write(idbuf, 0, idbuf.Length);
@@ -118,20 +95,10 @@ namespace NEL.Simple.SDK
                 stream.Read(strbuf, 0, cl);
                 msg.Cmd = System.Text.Encoding.UTF8.GetString(strbuf);
 
-                var fl = stream.ReadByte();
-                var fmdbuf = new byte[fl];
-                stream.Read(fmdbuf, 0, fl);
-                msg.Fmd = System.Text.Encoding.UTF8.GetString(fmdbuf);
-
-                var sl = stream.ReadByte();
-                var hostbuf = new byte[sl];
-                stream.Read(hostbuf, 0, sl);
-                msg.Host = System.Text.Encoding.UTF8.GetString(hostbuf);
-
                 var il = stream.ReadByte();
                 var idbuf = new byte[il];
                 stream.Read(idbuf, 0, il);
-                msg.id = System.Text.Encoding.UTF8.GetString(idbuf);
+                msg.ID = System.Text.Encoding.UTF8.GetString(idbuf);
 
                 msg.Params = new Dictionary<string, byte[]>();
                 var pcount = stream.ReadByte();

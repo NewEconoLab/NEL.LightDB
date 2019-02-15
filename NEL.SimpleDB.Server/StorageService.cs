@@ -10,11 +10,11 @@ namespace NEL.SimpleDB.Server
 
         public static bool state_DBOpen { get; private set; }
 
-        public StorageService()
+        public StorageService(Setting setting)
         {
             maindb = new DB();
             state_DBOpen = false;
-            string fullpath = System.IO.Path.GetFullPath(Setting.StoragePath);
+            string fullpath = System.IO.Path.GetFullPath(setting.StoragePath);
             if (System.IO.Directory.Exists(fullpath) == false)
                 System.IO.Directory.CreateDirectory(fullpath);
             string pathDB = System.IO.Path.Combine(fullpath, "maindb");

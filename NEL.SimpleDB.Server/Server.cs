@@ -20,13 +20,13 @@ namespace NEL.SimpleDB.Server
             {
                 NetMessage netMsg = NetMessage.Unpack(ms);
                 string cmd = netMsg.Cmd;
-                string fmd = netMsg.Fmd;
-                string host = netMsg.Host;
-                string id = netMsg.id;
-                NetMessage netMsgBack = NetMessage.Create(cmd + ".back",fmd+".back", host, id);
+                string id = netMsg.ID;
                 byte[] tableid = netMsg.Params.ContainsKey("tableid") ? netMsg.Params["tableid"] : null;
                 byte[] key = netMsg.Params.ContainsKey("key") ? netMsg.Params["key"] : null;
                 byte[] value = netMsg.Params.ContainsKey("value") ? netMsg.Params["value"] : null;
+
+                NetMessage netMsgBack = NetMessage.Create(cmd + ".back",id);
+
                 try
                 {
                     switch (cmd)
@@ -61,7 +61,9 @@ namespace NEL.SimpleDB.Server
                                 ISnapShot snapshot = peerSnapshots[peerid];
                                 value = snapshot.GetValueData(tableid, key);
                                 netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
-                                netMsgBack.Params["data"] = value;
+                                netMsgBack.Params["value"] = value;
+                                netMsgBack.Params["tableid"] = tableid;
+                                netMsgBack.Params["key"] = key;
                             }
                             return netMsgBack;
                         default:
