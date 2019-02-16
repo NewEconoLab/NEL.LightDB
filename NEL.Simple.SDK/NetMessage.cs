@@ -31,6 +31,7 @@ namespace NEL.Simple.SDK
         public static NetMessage Create(string cmd,string identity = "")
         {
             var msg = new NetMessage();
+            msg.Cmd = cmd;
             msg.ID = identity;
             msg.Params = new Dictionary<string, byte[]>();
             return msg;

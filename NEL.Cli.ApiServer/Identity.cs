@@ -17,6 +17,13 @@ namespace NEL.Cli.ApiServer
             ID = id;
         }
 
+        public Identity()
+        {
+            Host = "";
+            Mehotd = "";
+            Mehotd = "";
+        }
+
         public override string ToString()
         {
             return string.Format("{0}|{1}|{2}",Host , Mehotd , ID);
@@ -24,9 +31,11 @@ namespace NEL.Cli.ApiServer
 
         public static Identity ToIdentity(string str)
         {
+            if (str.IndexOf("|") < 0)
+                return new Identity();
             string[] strs = str.Split("|");
             if (strs.Length != 3)
-                throw new Exception("error:conver to identity faild");
+                return new Identity();
             return new Identity(strs[0], strs[1], strs[2]);
         }
     }

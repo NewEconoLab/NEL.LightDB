@@ -228,7 +228,7 @@ namespace NEL.Cli.ApiServer
                         Key = key
                     };
                     Identity identity = new Identity(host,method,id);
-                    NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue", identity.ToString());
+                    NetMessage netMessage = NetMessage.Create("_db.getvalue", identity.ToString());
                     netMessage.Params["tableid"] = new byte[] { };
                     netMessage.Params["key"] = (new byte[] { 0x70 }).Concat(storageKey.ToArray()).ToArray();
                     actor.Tell(netMessage.ToBytes());
@@ -248,7 +248,7 @@ namespace NEL.Cli.ApiServer
                 {
                     string key = identity.Host + identity.Mehotd;
                     JObject response = CreateResponse(identity.ID);
-                    response["result"] = DBValue.FromRaw(netMsg.Params["data"]).value.AsSerializable<StorageItem>().Value.ToHexString();
+                    response["result"] = DBValue.FromRaw(netMsg.Params["value"]).value.AsSerializable<StorageItem>().Value.ToHexString();
                     if (dic.ContainsKey(key))
                         dic[key].Enqueue(response);
                     else

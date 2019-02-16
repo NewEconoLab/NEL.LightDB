@@ -55,8 +55,23 @@ namespace NEL.SimpleDB.Server
                                 netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
                                 return netMsgBack;
                             }
-                        case "_db.snapshot.getvalue":
+                        case "_db.getvalue"://使用最新的snapshot
                             if (tableid != null && key != null)
+                            {
+                                ISnapShot snapshot = StorageService.maindb.UseSnapShot();
+                                value = snapshot.GetValueData(tableid, key);
+                                netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
+                                netMsgBack.Params["value"] = value;
+                                netMsgBack.Params["tableid"] = tableid;
+                                netMsgBack.Params["key"] = key;
+                            }
+                            else
+                            {
+                                netMsgBack.Params["error"] = Encoding.UTF8.GetBytes("need tableid and key");
+                            }
+                            return netMsgBack;
+                        case "_db.snapshot.getvalue":
+                            if (tableid != null && key != null && peerSnapshots.ContainsKey(peerid))
                             {
                                 ISnapShot snapshot = peerSnapshots[peerid];
                                 value = snapshot.GetValueData(tableid, key);
@@ -64,6 +79,10 @@ namespace NEL.SimpleDB.Server
                                 netMsgBack.Params["value"] = value;
                                 netMsgBack.Params["tableid"] = tableid;
                                 netMsgBack.Params["key"] = key;
+                            }
+                            else
+                            {
+                                netMsgBack.Params["error"] = Encoding.UTF8.GetBytes("need tableid and key , need usesnapshot first");
                             }
                             return netMsgBack;
                         default:
