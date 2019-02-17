@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NEL.Simple.SDK
 {
@@ -16,13 +17,13 @@ namespace NEL.Simple.SDK
             private set;
         }
 
-        public string ID //加一个id 用来放发送者的一些身份信息
+        public string ID //加一个id 用来附带发送者的一些身份信息
         {
             get;
             private set;
         }
 
-        public Dictionary<string, byte[]> Params
+        public Param[] Params
         {
             get;
             private set;
@@ -33,8 +34,15 @@ namespace NEL.Simple.SDK
             var msg = new NetMessage();
             msg.Cmd = cmd;
             msg.ID = identity;
-            msg.Params = new Dictionary<string, byte[]>();
+            msg.Params = new Param[] { };
             return msg;
+        }
+
+        public void AddParam(Param _param)
+        {
+            var _ps = Params.ToList();
+            _ps.Add(_param);
+            Params = _ps.ToArray();
         }
 
         public byte[] ToBytes()
@@ -51,9 +59,8 @@ namespace NEL.Simple.SDK
             var idbuf = System.Text.Encoding.UTF8.GetBytes(this.ID);
             if (strbuf.Length > 255)
                 throw new Exception("too long cmd.");
-            if (Params.Count > 255)
+            if (Params.Length > 255)
                 throw new Exception("too mush params.");
-
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
                 //emit msg
@@ -64,16 +71,12 @@ namespace NEL.Simple.SDK
                     ms.WriteByte((byte)idbuf.Length);
                     ms.Write(idbuf, 0, idbuf.Length);
 
-                    ms.WriteByte((byte)this.Params.Count);
+                    ms.WriteByte((byte)this.Params.Length);
                     foreach (var item in Params)
                     {
-                        var keybuf = System.Text.Encoding.UTF8.GetBytes(item.Key);
-                        var data = item.Value;
-                        var datalenbuf = BitConverter.GetBytes((UInt32)data.Length);
-                        ms.WriteByte((byte)keybuf.Length);
-                        ms.Write(keybuf, 0, keybuf.Length);
-                        ms.Write(datalenbuf, 0, 4);
-                        ms.Write(data, 0, data.Length);
+                        var itembuf = Param.Serialize(item);
+                        //stream.Write(BitConverter.GetBytes(itembuf.Length), 0, 4);
+                        ms.Write(itembuf, 0, itembuf.Length);
                     }
                 }
                 var len = (UInt32)ms.Length;
@@ -101,20 +104,11 @@ namespace NEL.Simple.SDK
                 stream.Read(idbuf, 0, il);
                 msg.ID = System.Text.Encoding.UTF8.GetString(idbuf);
 
-                msg.Params = new Dictionary<string, byte[]>();
                 var pcount = stream.ReadByte();
+                msg.Params = new Param[pcount];
                 for (var i = 0; i < pcount; i++)
                 {
-                    var keylen = stream.ReadByte();
-                    var keybuf = new byte[keylen];
-                    stream.Read(keybuf, 0, keylen);
-                    var key = System.Text.Encoding.UTF8.GetString(keybuf);
-                    var datalenbuf = new byte[4];
-                    stream.Read(datalenbuf, 0, 4);
-                    var datalen = BitConverter.ToUInt32(datalenbuf, 0);
-                    var data = new byte[datalen];
-                    stream.Read(data, 0, (int)datalen);
-                    msg.Params[key] = data;
+                    msg.Params[i] = Param.Deserialize(stream);
                 }
             }
             var posend = stream.Position;
@@ -123,6 +117,82 @@ namespace NEL.Simple.SDK
                 throw new Exception("bad msg.");
             }
             return msg;
+        }
+    }
+
+    public class Param
+    {
+        public byte[] tableid = new byte[] { };
+        public byte[] key = new byte[] { };
+        public byte[] value = new byte[] { };
+        public bool result = false; //查询的结果
+        public byte[] error = new byte[] { }; //可能出现的错误信息
+
+        public static byte[] Serialize(Param _param)
+        {
+            if(_param.tableid.Length>255)
+                throw new Exception("too long tableid");
+            if (_param.key.Length > 255)
+                throw new Exception("too long key");
+            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
+            {
+                //写入tableid
+                ms.WriteByte((byte)_param.tableid.Length);
+                ms.Write(_param.tableid, 0, _param.tableid.Length);
+                //写入key
+                ms.WriteByte((byte)_param.key.Length);
+                ms.Write(_param.key, 0, _param.key.Length);
+                //写入value  value的最大长度是 UInt32
+                var valuelenbuf = BitConverter.GetBytes((UInt32)_param.value.Length);
+                ms.Write(valuelenbuf, 0, 4);
+                ms.Write(_param.value, 0, _param.value.Length);
+                //写入result
+                byte[] _result = BitConverter.GetBytes(_param.result);
+                ms.WriteByte((byte)_result.Length);
+                ms.Write(_result,0, _result.Length);
+                //写入error 最大长度是 UInt32
+                var errorlenbuf = BitConverter.GetBytes((UInt32)_param.error.Length);
+                ms.Write(errorlenbuf, 0, 4);
+                ms.Write(_param.error, 0, _param.error.Length);
+
+                return ms.ToArray();
+            }
+        }
+
+        public static Param Deserialize(System.IO.Stream stream)
+        {
+            Param param = new Param();
+            //tableid
+            var tableidlen = stream.ReadByte();
+            var tableidbuf = new byte[tableidlen];
+            stream.Read(tableidbuf,0,tableidlen);
+            param.tableid = tableidbuf;
+            //key
+            var keylen = stream.ReadByte();
+            var keybuf = new byte[keylen];
+            stream.Read(keybuf,0, keylen);
+            param.key = keybuf;
+            //value value的长度定义的是四字节
+            var valuelenbuf = new byte[4];
+            stream.Read(valuelenbuf, 0,4);
+            var valuelen = BitConverter.ToUInt32(valuelenbuf,0);
+            var valuebuf = new byte[valuelen];
+            stream.Read(valuebuf,0, (int)valuelen);
+            param.value = valuebuf;
+            //result
+            var resultlen = stream.ReadByte();
+            var resultbuf = new byte[resultlen];
+            stream.Read(resultbuf,0,resultlen);
+            param.result = BitConverter.ToBoolean(resultbuf,0);
+            //error
+            var errorlenbuf = new byte[4];
+            stream.Read(errorlenbuf, 0, 4);
+            var errorlen = BitConverter.ToUInt32(errorlenbuf, 0);
+            var errorbuf = new byte[errorlen];
+            stream.Read(errorbuf, 0, (int)errorlen);
+            param.error = errorbuf;
+
+            return param;
         }
     }
 }

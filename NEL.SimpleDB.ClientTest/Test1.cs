@@ -64,18 +64,6 @@ namespace NEL.SimpleDB.ClientTest
                 }
                 if (line == "getvalue")
                 {
-                    UInt160 script_hash = UInt160.Parse("03febccf81ac85e3d795bc5cbd4e84e907812aa3");
-                    byte[] key = "5065746572".HexToBytes();
-                    StorageKey storageKey = new StorageKey
-                    {
-                        ScriptHash = script_hash,
-                        Key = key
-                    };
-                    NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue");
-                    netMessage.Params["tableid"] = new byte[] { };
-                    netMessage.Params["key"] = (new byte[] { 0x70 }).Concat(storageKey.ToArray()).ToArray();
-                    actor.Tell(netMessage.ToBytes());
-                    continue;
                 }
 
 
@@ -103,7 +91,6 @@ namespace NEL.SimpleDB.ClientTest
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream(data))
                 {
                     NetMessage netMessage = NetMessage.Unpack(ms);
-                    Console.WriteLine(Encoding.UTF8.GetString(netMessage.Params["result"]));
                 }
             }
         }

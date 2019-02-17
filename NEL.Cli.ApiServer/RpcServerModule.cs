@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using LightDB;
+using Neo.Network.P2P.Payloads;
 
 namespace NEL.Cli.ApiServer
 {
@@ -210,14 +211,10 @@ namespace NEL.Cli.ApiServer
         {
             if(!actor.IsVaild) //以防数据库服务挂了
                 actor = this.GetPipeline(string.Format("{0}:{1}/{2}", setting.DBServerAddress, setting.DBServerPort, setting.DBServerPath));
-
-            string method = request["method"].AsString();
-            string host = request["host"].AsString();
-            string id = request["id"].AsString();
+            //因为收发消息全异步，就用一个标识来明确某个回复对应哪个请求
+            Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString());
             JArray _params = (JArray)request["params"];
-            NetMessage msgBack = NetMessage.Create("_db.usesnapshot");
-            actor.Tell(msgBack.ToBytes());
-            switch (method)
+            switch (request["method"].AsString())
             {
                 case "getstorage":
                     UInt160 script_hash = UInt160.Parse(_params[0].AsString());
@@ -227,11 +224,10 @@ namespace NEL.Cli.ApiServer
                         ScriptHash = script_hash,
                         Key = key
                     };
-                    Identity identity = new Identity(host,method,id);
-                    NetMessage netMessage = NetMessage.Create("_db.getvalue", identity.ToString());
-                    netMessage.Params["tableid"] = new byte[] { };
-                    netMessage.Params["key"] = (new byte[] { 0x70 }).Concat(storageKey.ToArray()).ToArray();
+                    NetMessage netMessage = Protocol_GetStorage.CreateSendMsg(new byte[] { }, storageKey.ToArray() ,identity.ToString(),true);
                     actor.Tell(netMessage.ToBytes());
+                    break;
+                case "getblock":
                     break;
                 default:
                     break;
@@ -248,7 +244,8 @@ namespace NEL.Cli.ApiServer
                 {
                     string key = identity.Host + identity.Mehotd;
                     JObject response = CreateResponse(identity.ID);
-                    response["result"] = DBValue.FromRaw(netMsg.Params["value"]).value.AsSerializable<StorageItem>().Value.ToHexString();
+                    Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg);
+                    response["result"] = message.value.ToHexString();
                     if (dic.ContainsKey(key))
                         dic[key].Enqueue(response);
                     else

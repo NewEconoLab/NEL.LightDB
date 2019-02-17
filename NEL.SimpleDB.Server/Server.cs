@@ -21,9 +21,6 @@ namespace NEL.SimpleDB.Server
                 NetMessage netMsg = NetMessage.Unpack(ms);
                 string cmd = netMsg.Cmd;
                 string id = netMsg.ID;
-                byte[] tableid = netMsg.Params.ContainsKey("tableid") ? netMsg.Params["tableid"] : null;
-                byte[] key = netMsg.Params.ContainsKey("key") ? netMsg.Params["key"] : null;
-                byte[] value = netMsg.Params.ContainsKey("value") ? netMsg.Params["value"] : null;
 
                 NetMessage netMsgBack = NetMessage.Create(cmd + ".back",id);
 
@@ -33,65 +30,69 @@ namespace NEL.SimpleDB.Server
                     {
                         case "_db.usesnapshot":
                             peerSnapshots[peerid] = StorageService.maindb.UseSnapShot();
-                            netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
+                            netMsgBack.AddParam(new Param() {result = true });
                             return netMsgBack;
                         case "_db.CreateWriteBatch":
                             peerWriteBatch[peerid] = StorageService.maindb.CreateWriteBatch();
-                            netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
+                            netMsgBack.AddParam(new Param() { result = true });
                             return netMsgBack;
                         case "_db.put":
-                            if (tableid != null && key != null && value != null)
+                            for (var i = 0; i < netMsg.Params.Length; i++)
                             {
                                 IWriteBatch writeBatch = peerWriteBatch[peerid];
-                                writeBatch.Put(tableid, key, value);
+                                writeBatch.Put(netMsg.Params[i].tableid, netMsg.Params[i].key, netMsg.Params[i].value);
                                 StorageService.maindb.WriteBatch(writeBatch);
                             }
-                            netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
+                            netMsgBack.AddParam(new Param() { result = true });
                             return netMsgBack;
                         case "_db.write":
                             {
                                 IWriteBatch writeBatch = peerWriteBatch[peerid];
                                 StorageService.maindb.WriteBatch(writeBatch);
-                                netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
+                                netMsgBack.AddParam(new Param() { result = true });
                                 return netMsgBack;
                             }
                         case "_db.getvalue"://使用最新的snapshot
-                            if (tableid != null && key != null)
                             {
                                 ISnapShot snapshot = StorageService.maindb.UseSnapShot();
-                                value = snapshot.GetValueData(tableid, key);
-                                netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
-                                netMsgBack.Params["value"] = value;
-                                netMsgBack.Params["tableid"] = tableid;
-                                netMsgBack.Params["key"] = key;
+                                for (var i = 0; i < netMsg.Params.Length; i++)
+                                {
+                                    var tableid = netMsg.Params[i].tableid;
+                                    var key = netMsg.Params[i].key;
+                                    var value = snapshot.GetValueData(tableid, key);
+                                    Param param = new Param();
+                                    param.result = true;
+                                    param.value = value;
+                                    param.key = key;
+                                    param.tableid = tableid;
+                                    netMsgBack.AddParam(param);
+                                }
+                                return netMsgBack;
                             }
-                            else
-                            {
-                                netMsgBack.Params["error"] = Encoding.UTF8.GetBytes("need tableid and key");
-                            }
-                            return netMsgBack;
                         case "_db.snapshot.getvalue":
-                            if (tableid != null && key != null && peerSnapshots.ContainsKey(peerid))
                             {
                                 ISnapShot snapshot = peerSnapshots[peerid];
-                                value = snapshot.GetValueData(tableid, key);
-                                netMsgBack.Params["result"] = Encoding.UTF8.GetBytes("succ");
-                                netMsgBack.Params["value"] = value;
-                                netMsgBack.Params["tableid"] = tableid;
-                                netMsgBack.Params["key"] = key;
+                                for (var i = 0; i < netMsg.Params.Length; i++)
+                                {
+                                    var tableid = netMsg.Params[i].tableid;
+                                    var key = netMsg.Params[i].key;
+                                    var value = snapshot.GetValueData(tableid, key);
+                                    Param param = new Param();
+                                    param.result = true;
+                                    param.value = value;
+                                    param.key = key;
+                                    param.tableid = tableid;
+                                    netMsgBack.AddParam(param);
+                                }
+                                return netMsgBack;
                             }
-                            else
-                            {
-                                netMsgBack.Params["error"] = Encoding.UTF8.GetBytes("need tableid and key , need usesnapshot first");
-                            }
-                            return netMsgBack;
                         default:
                             throw new Exception("unknown msg cmd:" + netMsg.Cmd);
                     }
                 }
                 catch (Exception e)
                 {
-                    netMsgBack.Params["error"] = Encoding.UTF8.GetBytes(e.Message);
+                    netMsgBack.AddParam(new Param() { error = Encoding.UTF8.GetBytes(e.Message) });
                     return netMsgBack;
                 }
 

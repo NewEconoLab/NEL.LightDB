@@ -16,8 +16,33 @@ namespace NEL.Cli.ApiServer
             systemC.OpenNetwork(new PeerOption());
             systemC.Start();
 
-            Console.WriteLine("按任意键结束");
-            Console.ReadLine();
+            bool loop = true;
+            while (loop)
+            {
+                var str = Console.ReadLine();
+                string[] cmds = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                loop = ProcessCommand(cmds);
+                System.Threading.Tasks.Task.Delay(1);
+            }
+        }
+
+        static bool ProcessCommand(string[] cmds)
+        {
+            var command = cmds[0].ToLower();
+            switch (command)
+            {
+                case "exit":
+                    return false;
+                case "help":
+                default:
+                    return ShowHelpCommand();
+            }
+        }
+
+        static bool ShowHelpCommand()
+        {
+            Console.WriteLine("exit");
+            return true;
         }
     }
 }
