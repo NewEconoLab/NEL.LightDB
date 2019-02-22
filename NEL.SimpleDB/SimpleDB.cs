@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LightDB;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -63,6 +64,10 @@ namespace NEL.SimpleDB
         }
         public void WriteBatch(IWriteBatch wb)
         {
+            //每次写入的时候增加一个高度
+            var finalheight = snapshotLast.DataHeight + 1;
+            wb.Put(new byte[1] { 0x01}, "_height".ToBytes_UTF8Encode(),BitConverter.GetBytes(finalheight));
+
             RocksDbSharp.Native.Instance.rocksdb_write(this.dbPtr, this.defaultWriteOpPtr, (wb as WriteBatch).batchptr);
             snapshotLast.Dispose();
             snapshotLast = CreateSnapInfo();
@@ -187,6 +192,7 @@ namespace NEL.SimpleDB
     }
     public interface ISnapShot : IDisposable
     {
+        UInt64 DataHeight { get; }
         byte[] GetValueData(byte[] tableid, byte[] key);
         IKeyFinder CreateKeyFinder(byte[] tableid, byte[] beginkey = null, byte[] endkey = null);
         IKeyIterator CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null);
@@ -206,6 +212,16 @@ namespace NEL.SimpleDB
 
             snapshotHandle = RocksDbSharp.Native.Instance.rocksdb_create_snapshot(this.dbPtr);
             RocksDbSharp.Native.Instance.rocksdb_readoptions_set_snapshot(readopHandle, snapshotHandle);
+
+            var _height = GetValueData(new byte[1] {0x01 },"_height".ToBytes_UTF8Encode());
+            if (_height.Length > 0)
+            {
+                this.DataHeight = BitConverter.ToUInt64(_height, 0);
+            }
+            else
+            {
+                this.DataHeight = 0;
+            }
         }
         int refCount = 0;
         public IntPtr dbPtr;
@@ -241,6 +257,16 @@ namespace NEL.SimpleDB
                 refCount++;
             }
         }
+        private UInt64 _dataHeight;
+        public UInt64 DataHeight
+        {
+            get { return _dataHeight; }
+            private set
+            {
+                _dataHeight = value;
+            }
+        }
+
         public byte[] GetValueData(byte[] tableid, byte[] key)
         {
             byte[] finialkey = LightDB.Helper.CalcKey(tableid, key);
@@ -348,20 +374,21 @@ namespace NEL.SimpleDB
                 return data;
             }
         }
+
         private void PutDataFinal(byte[] finalkey, byte[] value)
         {
             var hexkey = LightDB.Helper.ToString_Hex(finalkey);
             cache[hexkey] = value;
             RocksDbSharp.Native.Instance.rocksdb_writebatch_put(batchptr, finalkey, (ulong)finalkey.Length, value, (ulong)value.Length);
-            //batch.Put(finalkey, value);
         }
+
         private void DeleteFinal(byte[] finalkey)
         {
             var hexkey = LightDB.Helper.ToString_Hex(finalkey);
             cache.Remove(hexkey);
             RocksDbSharp.Native.Instance.rocksdb_writebatch_delete(batchptr, finalkey, (ulong)finalkey.Length);
-            //batch.Delete(finalkey);
         }
+
         public void CreateTable(byte[] tableid, byte[] tableinfo)
         {
             var finalkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
@@ -415,7 +442,6 @@ namespace NEL.SimpleDB
                     count++;
             }
             PutDataFinal(finalkey, finaldata);
-
             var countvalue = BitConverter.GetBytes(count);
             PutDataFinal(countkey, countvalue);
         }

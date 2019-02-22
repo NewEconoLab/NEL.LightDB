@@ -19,8 +19,6 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using LightDB;
 using Neo.Network.P2P.Payloads;
 
 namespace NEL.Cli.ApiServer
@@ -38,7 +36,9 @@ namespace NEL.Cli.ApiServer
             setting = new Setting();
         }
 
-        private ConcurrentDictionary<string, ConcurrentQueue<JObject>> dic = new ConcurrentDictionary<string, ConcurrentQueue<JObject>>();
+        public DataCache<string, byte[]> storageCache = new DataCache<string, byte[]>();
+        public DataCache<string, BlockState> blockstateCache = new DataCache<string, BlockState>();
+        public DataCache<string, Transaction[]> transactionCache = new DataCache<string, Transaction[]>();
 
         private async Task ProcessAsync(HttpContext context)
         {
@@ -95,24 +95,14 @@ namespace NEL.Cli.ApiServer
                 }
                 else
                 {
-                    ProcessSend(request);
+                    response =await ProcessSend(request);
                 }
             }
             else
             {
-                ProcessSend(request);
+                response = await ProcessSend(request);
             }
             context.Response.ContentType = "application/json-rpc";
-            var key = request["host"].AsString() + request["method"].AsString();
-            DateTime time = DateTime.Now;
-            while ((DateTime.Now - time).TotalSeconds < 5.0f)
-            {
-                if (dic.ContainsKey(key) && !dic[key].IsEmpty)
-                {
-                    dic[key].TryDequeue(out response);
-                    break;
-                }
-            }
             await context.Response.WriteAsync(response.ToString(), Encoding.UTF8);
         }
 
@@ -205,33 +195,83 @@ namespace NEL.Cli.ApiServer
 
         public override void OnTellLocalObj(IModulePipeline from, object obj)
         {
+
         }
 
-        private void ProcessSend(JObject request)
+        private async Task<JObject> ProcessSend(JObject request)
         {
             if(!actor.IsVaild) //以防数据库服务挂了
                 actor = this.GetPipeline(string.Format("{0}:{1}/{2}", setting.DBServerAddress, setting.DBServerPort, setting.DBServerPath));
             //因为收发消息全异步，就用一个标识来明确某个回复对应哪个请求
-            Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString());
             JArray _params = (JArray)request["params"];
             switch (request["method"].AsString())
             {
                 case "getstorage":
-                    UInt160 script_hash = UInt160.Parse(_params[0].AsString());
-                    byte[] key = _params[1].AsString().HexToBytes();
-                    StorageKey storageKey = new StorageKey
                     {
-                        ScriptHash = script_hash,
-                        Key = key
-                    };
-                    NetMessage netMessage = Protocol_GetStorage.CreateSendMsg(new byte[] { }, storageKey.ToArray() ,identity.ToString(),true);
-                    actor.Tell(netMessage.ToBytes());
-                    break;
+                        UInt160 script_hash = UInt160.Parse(_params[0].AsString());
+                        byte[] key = _params[1].AsString().HexToBytes();
+                        StorageKey storageKey = new StorageKey
+                        {
+                            ScriptHash = script_hash,
+                            Key = key
+                        };
+                        Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString(), storageKey.ToArray().ToHexString());
+                        NetMessage netMessage = Protocol_GetStorage.CreateSendMsg(storageKey.ToArray(), identity.ToString(), true);
+                        actor.Tell(netMessage.ToBytes());
+                        var value = await storageCache.Get(netMessage.ID);
+                        var response = CreateResponse(identity.ID);
+                        response["result"] = value.ToHexString();
+                        return response;
+                    }
                 case "getblock":
-                    break;
+                    {
+                        Block block;
+                        UInt256 hash;
+                        hash = UInt256.Parse(_params[0].AsString());
+                        Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString(), hash.ToString());
+                        NetMessage netMessage = Protocol_GetBlock.CreateSendMsg(hash.ToArray(), identity.ToString(), true);
+                        actor.Tell(netMessage.ToBytes());
+                        var blockstate = await blockstateCache.Get(netMessage.ID);
+                        var transactions = new Transaction[] { };
+                        //获取这个block中的所有交易
+                        {
+                            UInt256[] hashes = blockstate.TrimmedBlock.Hashes;
+                            //简单处理 key可能有重复
+                            var key = hashes.First().ToString()+hashes.Length+hashes.Last().ToString();
+                            Identity identity_tran = new Identity(request["host"].AsString(), "gettransaction", request["id"].AsString(), key);
+                            NetMessage netMessage_tran = Protocol_GetTransaction.CreateSendMsg(hashes, identity_tran.ToString(), true);
+                            actor.Tell(netMessage_tran.ToBytes());
+                            transactions = await transactionCache.Get(netMessage_tran.ID);
+                        }
+                        block = new Block
+                        {
+                            Version = blockstate.TrimmedBlock.Version,
+                            PrevHash = blockstate.TrimmedBlock.PrevHash,
+                            MerkleRoot = blockstate.TrimmedBlock.MerkleRoot,
+                            Timestamp = blockstate.TrimmedBlock.Timestamp,
+                            Index = blockstate.TrimmedBlock.Index,
+                            ConsensusData = blockstate.TrimmedBlock.ConsensusData,
+                            NextConsensus = blockstate.TrimmedBlock.NextConsensus,
+                            Witness = blockstate.TrimmedBlock.Witness,
+                            Transactions = transactions
+                        };
+                        var response = CreateResponse(identity.ID);
+                        bool verbose = _params.Count >= 2 && _params[1].AsBooleanOrDefault(false);
+                        if (verbose)
+                        {
+                            JObject json = block.ToJson(); // 目前使用neo中的block.tojson用到了protocol这个东西，后续抽离
+                            response["result"] = json;
+                        }
+                        else
+                        {
+                            response["result"] = block.ToArray().ToHexString();
+                        }
+                        return response;
+                    }
                 default:
                     break;
             }
+            return null;
         }
 
         private void ProcessGet(byte[] data)
@@ -242,17 +282,18 @@ namespace NEL.Cli.ApiServer
                 Identity identity = Identity.ToIdentity(netMsg.ID);
                 if (identity.Mehotd == "getstorage")
                 {
-                    string key = identity.Host + identity.Mehotd;
-                    JObject response = CreateResponse(identity.ID);
-                    Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg);
-                    response["result"] = message.value.ToHexString();
-                    if (dic.ContainsKey(key))
-                        dic[key].Enqueue(response);
-                    else
-                    {
-                        dic.TryAdd(key, new ConcurrentQueue<JObject>());
-                        dic[key].Enqueue(response);
-                    }
+                    Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg)[0];
+                    storageCache.Add(netMsg.ID, message.value);
+                }
+                else if (identity.Mehotd == "getblock")
+                {
+                    BlockState blockState = Protocol_GetBlock.PraseRecvMsg(netMsg)[0];
+                    blockstateCache.Add(netMsg.ID, blockState);
+                }
+                else if (identity.Mehotd == "gettransaction")
+                {
+                    Transaction[] transactions = Protocol_GetTransaction.PraseRecvMsg(netMsg);
+                    transactionCache.Add(netMsg.ID,transactions);
                 }
             }
         }

@@ -15,11 +15,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEL.SimpleDB", "NEL.SimpleD
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEL.SimpleDB.Server", "NEL.SimpleDB.Server\NEL.SimpleDB.Server.csproj", "{DD4CD431-5127-4517-B329-0D88D572D1CA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEL.SimpleDB.ClientTest", "NEL.SimpleDB.ClientTest\NEL.SimpleDB.ClientTest.csproj", "{A9626AF6-64C7-4E06-8435-91AE8A715799}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEL.Simple.SDK", "NEL.Simple.SDK\NEL.Simple.SDK.csproj", "{B54CBBC7-453F-4212-8D76-C5D1D77BCEAF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NEL.Cli.ApiServer", "NEL.Cli.ApiServer\NEL.Cli.ApiServer.csproj", "{485D0405-651F-4EDD-B0EC-298CA06F6598}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NEL.Cli.ApiServer", "NEL.Cli.ApiServer\NEL.Cli.ApiServer.csproj", "{485D0405-651F-4EDD-B0EC-298CA06F6598}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,10 +49,6 @@ Global
 		{DD4CD431-5127-4517-B329-0D88D572D1CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD4CD431-5127-4517-B329-0D88D572D1CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD4CD431-5127-4517-B329-0D88D572D1CA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A9626AF6-64C7-4E06-8435-91AE8A715799}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A9626AF6-64C7-4E06-8435-91AE8A715799}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A9626AF6-64C7-4E06-8435-91AE8A715799}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A9626AF6-64C7-4E06-8435-91AE8A715799}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B54CBBC7-453F-4212-8D76-C5D1D77BCEAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B54CBBC7-453F-4212-8D76-C5D1D77BCEAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B54CBBC7-453F-4212-8D76-C5D1D77BCEAF}.Release|Any CPU.ActiveCfg = Release|Any CPU

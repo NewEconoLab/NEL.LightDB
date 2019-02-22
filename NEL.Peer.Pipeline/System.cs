@@ -234,7 +234,7 @@ namespace NEL.Pipeline
                 int seek = 0;
                 var fromlen = data[seek]; seek++;
                 string from = System.Text.Encoding.UTF8.GetString(data, seek, fromlen); seek += fromlen;
-                var tolen = data[seek]; seek++;
+                var tolen = data[seek];  seek++;
                 string to = System.Text.Encoding.UTF8.GetString(data, seek, tolen); seek += tolen;
                 //if (from == "" || to =="")
                 //{
