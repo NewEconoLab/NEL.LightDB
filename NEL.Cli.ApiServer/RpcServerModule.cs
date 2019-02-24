@@ -38,7 +38,7 @@ namespace NEL.Cli.ApiServer
 
         public DataCache<string, byte[]> storageCache = new DataCache<string, byte[]>();
         public DataCache<string, BlockState> blockstateCache = new DataCache<string, BlockState>();
-        public DataCache<string, Transaction[]> transactionCache = new DataCache<string, Transaction[]>();
+        public DataCache<string, Transaction> transactionCache = new DataCache<string, Transaction>();
 
         private async Task ProcessAsync(HttpContext context)
         {
@@ -216,7 +216,7 @@ namespace NEL.Cli.ApiServer
                             Key = key
                         };
                         Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString(), storageKey.ToArray().ToHexString());
-                        NetMessage netMessage = Protocol_GetStorage.CreateSendMsg(storageKey.ToArray(), identity.ToString(), true);
+                        NetMessage netMessage = Protocol_GetStorage.CreateSendMsg(storageKey.ToArray(), identity.ToString(),0 ,true);
                         actor.Tell(netMessage.ToBytes());
                         var value = await storageCache.Get(netMessage.ID);
                         var response = CreateResponse(identity.ID);
@@ -229,19 +229,19 @@ namespace NEL.Cli.ApiServer
                         UInt256 hash;
                         hash = UInt256.Parse(_params[0].AsString());
                         Identity identity = new Identity(request["host"].AsString(), request["method"].AsString(), request["id"].AsString(), hash.ToString());
-                        NetMessage netMessage = Protocol_GetBlock.CreateSendMsg(hash.ToArray(), identity.ToString(), true);
+                        NetMessage netMessage = Protocol_GetBlock.CreateSendMsg(hash.ToArray(), identity.ToString(), 0,true);
                         actor.Tell(netMessage.ToBytes());
                         var blockstate = await blockstateCache.Get(netMessage.ID);
                         var transactions = new Transaction[] { };
                         //获取这个block中的所有交易
                         {
-                            UInt256[] hashes = blockstate.TrimmedBlock.Hashes;
-                            //简单处理 key可能有重复
-                            var key = hashes.First().ToString()+hashes.Length+hashes.Last().ToString();
-                            Identity identity_tran = new Identity(request["host"].AsString(), "gettransaction", request["id"].AsString(), key);
-                            NetMessage netMessage_tran = Protocol_GetTransaction.CreateSendMsg(hashes, identity_tran.ToString(), true);
-                            actor.Tell(netMessage_tran.ToBytes());
-                            transactions = await transactionCache.Get(netMessage_tran.ID);
+                            //UInt256[] hashes = blockstate.TrimmedBlock.Hashes;
+                            ////简单处理 key可能有重复
+                            //var key = hashes.First().ToString()+hashes.Length+hashes.Last().ToString();
+                            //Identity identity_tran = new Identity(request["host"].AsString(), "gettransaction", request["id"].AsString(), key);
+                            //NetMessage netMessage_tran = Protocol_GetTransaction.CreateSendMsg(hashes, identity_tran.ToString(), 0,true);
+                            //actor.Tell(netMessage_tran.ToBytes());
+                            //transactions = await transactionCache.Get(netMessage_tran.ID);
                         }
                         block = new Block
                         {
@@ -282,18 +282,18 @@ namespace NEL.Cli.ApiServer
                 Identity identity = Identity.ToIdentity(netMsg.ID);
                 if (identity.Mehotd == "getstorage")
                 {
-                    Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg)[0];
+                    Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg);
                     storageCache.Add(netMsg.ID, message.value);
                 }
                 else if (identity.Mehotd == "getblock")
                 {
-                    BlockState blockState = Protocol_GetBlock.PraseRecvMsg(netMsg)[0];
+                    BlockState blockState = Protocol_GetBlock.PraseRecvMsg(netMsg);
                     blockstateCache.Add(netMsg.ID, blockState);
                 }
                 else if (identity.Mehotd == "gettransaction")
                 {
-                    Transaction[] transactions = Protocol_GetTransaction.PraseRecvMsg(netMsg);
-                    transactionCache.Add(netMsg.ID,transactions);
+                    Transaction transaction = Protocol_GetTransaction.PraseRecvMsg(netMsg);
+                    transactionCache.Add(netMsg.ID,transaction);
                 }
             }
         }

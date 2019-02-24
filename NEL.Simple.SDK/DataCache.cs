@@ -17,12 +17,16 @@ namespace NEL.Simple.SDK
 
         public void Add(TKey key, TValue value)
         {
-            if (dictionary.ContainsKey(key))
-                dictionary[key].Enqueue(value);
-            else
+            lock (dictionary)
             {
-                dictionary.TryAdd(key, new ConcurrentQueue<TValue>());
-                dictionary[key].Enqueue(value);
+                //Console.WriteLine("111111111111111|" + key + "|" + value);
+                if (dictionary.ContainsKey(key))
+                    dictionary[key].Enqueue(value);
+                else
+                {
+                    dictionary.TryAdd(key, new ConcurrentQueue<TValue>());
+                    dictionary[key].Enqueue(value);
+                }
             }
         }
 
@@ -30,11 +34,21 @@ namespace NEL.Simple.SDK
         {
             while (true)
             {
-                if (dictionary.ContainsKey(key) && dictionary[key].Count > 0)
+                lock (dictionary)
                 {
-                    TValue value;
-                    dictionary[key].TryDequeue(out value);
-                    return value;
+                    if (dictionary.ContainsKey(key) && dictionary[key].Count > 0)
+                    {
+                        TValue value;
+                        dictionary[key].TryDequeue(out value);
+                        if (dictionary[key].Count == 0)
+                        {
+                            ConcurrentQueue<TValue> q;
+                            dictionary.TryRemove(key, out q);
+                        }
+                        //Console.WriteLine("222222222222222|" + key + "|" + (value as Param).ToString());
+                        if (value != null)
+                            return value;
+                    }
                 }
                 await Task.Delay(0);
             }

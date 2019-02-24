@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Threading;
 
 namespace NEL.Simple.SDK
 {
@@ -23,26 +25,19 @@ namespace NEL.Simple.SDK
             private set;
         }
 
-        public Param[] Params
+        public Param Param
         {
             get;
             private set;
         }
 
-        public static NetMessage Create(string cmd,string identity = "")
+        public static NetMessage Create(string cmd,Param _p = null,string identity = "")
         {
             var msg = new NetMessage();
             msg.Cmd = cmd;
             msg.ID = identity;
-            msg.Params = new Param[] { };
+            msg.Param = _p?? new Param();
             return msg;
-        }
-
-        public void AddParam(Param _param)
-        {
-            var _ps = Params.ToList();
-            _ps.Add(_param);
-            Params = _ps.ToArray();
         }
 
         public byte[] ToBytes()
@@ -53,14 +48,13 @@ namespace NEL.Simple.SDK
                 return ms.ToArray();
             }
         }
+
         public void Pack(System.IO.Stream stream)
         {
             var strbuf = System.Text.Encoding.UTF8.GetBytes(this.Cmd);
             var idbuf = System.Text.Encoding.UTF8.GetBytes(this.ID);
             if (strbuf.Length > 255)
                 throw new Exception("too long cmd.");
-            if (Params.Length > 255)
-                throw new Exception("too mush params.");
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
                 //emit msg
@@ -71,13 +65,9 @@ namespace NEL.Simple.SDK
                     ms.WriteByte((byte)idbuf.Length);
                     ms.Write(idbuf, 0, idbuf.Length);
 
-                    ms.WriteByte((byte)this.Params.Length);
-                    foreach (var item in Params)
-                    {
-                        var itembuf = Param.Serialize(item);
-                        //stream.Write(BitConverter.GetBytes(itembuf.Length), 0, 4);
-                        ms.Write(itembuf, 0, itembuf.Length);
-                    }
+                    var itembuf = Param.Serialize(Param);
+                    //stream.Write(BitConverter.GetBytes(itembuf.Length), 0, 4);
+                    ms.Write(itembuf, 0, itembuf.Length);
                 }
                 var len = (UInt32)ms.Length;
                 stream.Write(BitConverter.GetBytes(len), 0, 4);
@@ -104,12 +94,8 @@ namespace NEL.Simple.SDK
                 stream.Read(idbuf, 0, il);
                 msg.ID = System.Text.Encoding.UTF8.GetString(idbuf);
 
-                var pcount = stream.ReadByte();
-                msg.Params = new Param[pcount];
-                for (var i = 0; i < pcount; i++)
-                {
-                    msg.Params[i] = Param.Deserialize(stream);
-                }
+                msg.Param = Param.Deserialize(stream);
+
             }
             var posend = stream.Position;
             if (posend - posstart != msglen)
@@ -122,6 +108,9 @@ namespace NEL.Simple.SDK
 
     public class Param
     {
+        public UInt64 snapid = 0;
+        public UInt64 wbid = 0;
+        public UInt64 itid = 0;
         public byte[] tableid = new byte[] { };
         public byte[] key = new byte[] { };
         public byte[] value = new byte[] { };
@@ -136,6 +125,18 @@ namespace NEL.Simple.SDK
                 throw new Exception("too long key");
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
+                //写入snapid
+                var bytes = BitConverter.GetBytes(_param.snapid);
+                ms.WriteByte((byte)bytes.Length);
+                ms.Write(bytes,0, bytes.Length);
+                //写入wbid
+                bytes = BitConverter.GetBytes(_param.wbid);
+                ms.WriteByte((byte)bytes.Length);
+                ms.Write(bytes, 0, bytes.Length);
+                //写入itid
+                bytes = BitConverter.GetBytes(_param.itid);
+                ms.WriteByte((byte)bytes.Length);
+                ms.Write(bytes, 0, bytes.Length);
                 //写入tableid
                 ms.WriteByte((byte)_param.tableid.Length);
                 ms.Write(_param.tableid, 0, _param.tableid.Length);
@@ -162,6 +163,21 @@ namespace NEL.Simple.SDK
         public static Param Deserialize(System.IO.Stream stream)
         {
             Param param = new Param();
+            //snapid
+            var snapidlen = stream.ReadByte();
+            var snapidbuf = new byte[snapidlen];
+            stream.Read(snapidbuf,0,snapidlen);
+            param.snapid = BitConverter.ToUInt64(snapidbuf,0);
+            //wbid
+            var wbidlen = stream.ReadByte();
+            var wbidbuf = new byte[wbidlen];
+            stream.Read(wbidbuf, 0, wbidlen);
+            param.wbid = BitConverter.ToUInt64(wbidbuf, 0);
+            //itid
+            var itidlen = stream.ReadByte();
+            var itidbuf = new byte[itidlen];
+            stream.Read(itidbuf, 0, itidlen);
+            param.itid = BitConverter.ToUInt64(itidbuf, 0);
             //tableid
             var tableidlen = stream.ReadByte();
             var tableidbuf = new byte[tableidlen];
@@ -170,14 +186,14 @@ namespace NEL.Simple.SDK
             //key
             var keylen = stream.ReadByte();
             var keybuf = new byte[keylen];
-            stream.Read(keybuf,0, keylen);
+            stream.Read(keybuf, 0, keylen);
             param.key = keybuf;
             //value value的长度定义的是四字节
             var valuelenbuf = new byte[4];
             stream.Read(valuelenbuf, 0,4);
             var valuelen = BitConverter.ToUInt32(valuelenbuf,0);
             var valuebuf = new byte[valuelen];
-            stream.Read(valuebuf,0, (int)valuelen);
+            stream.Read(valuebuf, 0, (int)valuelen);
             param.value = valuebuf;
             //result
             var resultlen = stream.ReadByte();

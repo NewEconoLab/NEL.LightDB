@@ -49,8 +49,8 @@ namespace NEL.SimpleDB.Server
                 string cmd = netMsg.Cmd;
                 string id = netMsg.ID;
 
-                NetMessage netMsgBack = NetMessage.Create(cmd + ".back",id);
-
+                NetMessage netMsgBack;
+                Console.WriteLine(netMsg.Cmd);
                 try
                 {
                     switch (cmd)
@@ -59,117 +59,136 @@ namespace NEL.SimpleDB.Server
                             {
                                 var snapshot = StorageService.maindb.UseSnapShot();
                                 peerSnapshots[peerid + snapshot.DataHeight.ToString()] = StorageService.maindb.UseSnapShot();
-                                netMsgBack.AddParam(new Param() { result = true, value = BitConverter.GetBytes(snapshot.DataHeight) });
+                                var p = new Param() { result = true, snapid = snapshot.DataHeight };
+                                netMsgBack = NetMessage.Create(cmd,p,id);
+                                return netMsgBack;
+                            }
+                        case "_db.disposeSnapshot":
+                            {
+                                ISnapShot snapshot;
+                                peerSnapshots.TryRemove(peerid + netMsg.ID, out snapshot);
+                                snapshot.Dispose();
+                                var p = new Param() { result = true};
+                                netMsgBack = NetMessage.Create(cmd, p, id);
                                 return netMsgBack;
                             }
                         case "_db.CreateWriteBatch":
                             {
-                                var wid = WriteBatchID;
-                                peerWriteBatch[peerid + wid.ToString()] = StorageService.maindb.CreateWriteBatch();
-                                netMsgBack.AddParam(new Param() { result = true ,value = BitConverter.GetBytes(wid) });
+                                var wbid = WriteBatchID;
+                                peerWriteBatch[peerid+ wbid.ToString()] = StorageService.maindb.CreateWriteBatch();
+                                var p = new Param() { result = true ,wbid = wbid};
+                                netMsgBack = NetMessage.Create(cmd, p, id);
                                 return netMsgBack;
                             }
                         case "_db.put":
                             {
-                                for (var i = 0; i < netMsg.Params.Length; i++)
-                                {
-                                    IWriteBatch writeBatch = peerWriteBatch[peerid + netMsg.ID];    
-                                    writeBatch.Put(netMsg.Params[i].tableid, netMsg.Params[i].key, netMsg.Params[i].value);
-                                }
-                                netMsgBack.AddParam(new Param() { result = true });
+                                IWriteBatch writeBatch = peerWriteBatch[peerid+netMsg.Param.wbid.ToString()];
+                                writeBatch.Put(netMsg.Param.tableid, netMsg.Param.key, netMsg.Param.value);
+                                var p = new Param() { result = true };
+                                netMsgBack = NetMessage.Create(cmd, p, id);
                                 return netMsgBack;
                             }
                         case "_db.delete":
                             {
-                                for (var i = 0; i < netMsg.Params.Length; i++)
-                                {
-                                    IWriteBatch writeBatch = peerWriteBatch[peerid + netMsg.ID];
-                                    writeBatch.Delete(netMsg.Params[i].tableid, netMsg.Params[i].key);
-                                }
-                                netMsgBack.AddParam(new Param() { result = true });
+                                IWriteBatch writeBatch = peerWriteBatch[peerid + netMsg.Param.wbid.ToString()];
+                                writeBatch.Delete(netMsg.Param.tableid, netMsg.Param.key);
+                                var p = new Param() { result = true };
+                                netMsgBack = NetMessage.Create(cmd, p, id);
                                 return netMsgBack;
                             }
                         case "_db.write":
                             {
-                                IWriteBatch writeBatch = peerWriteBatch[peerid + netMsg.ID];
-                                StorageService.maindb.WriteBatch(writeBatch);
-                                netMsgBack.AddParam(new Param() { result = true });
+                                IWriteBatch writeBatch = peerWriteBatch[peerid+netMsg.Param.wbid.ToString()];
+                                var p = new Param() { result = false };
+                                if (writeBatch.wbcount > 0)
+                                {
+                                    StorageService.maindb.WriteBatch(writeBatch);
+                                    peerWriteBatch.Remove(peerid + netMsg.Param.wbid.ToString(), out writeBatch);
+                                    p = new Param() { result = true };
+                                }
+                                netMsgBack = NetMessage.Create(cmd, p, id);
                                 return netMsgBack;
                             }
                         case "_db.getvalue"://使用最新的snapshot 基本就是给apiserver用的
                             {
                                 ISnapShot snapshot = StorageService.maindb.UseSnapShot();
-                                for (var i = 0; i < netMsg.Params.Length; i++)
-                                {
-                                    var tableid = netMsg.Params[i].tableid;
-                                    var key = netMsg.Params[i].key;
-                                    var value = snapshot.GetValueData(tableid, key);
-                                    Param param = new Param();
-                                    param.result = true;
-                                    param.value = value;
-                                    param.key = key;
-                                    param.tableid = tableid;
-                                    netMsgBack.AddParam(param);
-                                }
+                                var tableid = netMsg.Param.tableid;
+                                var key = netMsg.Param.key;
+                                var value = snapshot.GetValueData(tableid, key);
+                                Param param = new Param();
+                                param.snapid = snapshot.DataHeight;
+                                param.result = true;
+                                param.value = value;
+                                param.key = key;
+                                param.tableid = tableid;
+                                netMsgBack = NetMessage.Create(cmd,param,id);
                                 return netMsgBack;
                             }
                         case "_db.snapshot.getvalue":
                             {
-                                ISnapShot snapshot = peerSnapshots[peerid + netMsg.ID];
-                                for (var i = 0; i < netMsg.Params.Length; i++)
-                                {
-                                    var tableid = netMsg.Params[i].tableid;
-                                    var key = netMsg.Params[i].key;
-                                    var value = snapshot.GetValueData(tableid, key);
-                                    Param param = new Param();
-                                    param.result = true;
-                                    param.value = value;
-                                    param.key = key;
-                                    param.tableid = tableid;
-                                    netMsgBack.AddParam(param);
-                                }
+                                ISnapShot snapshot = peerSnapshots[peerid + netMsg.Param.snapid.ToString()];
+                                var tableid = netMsg.Param.tableid;
+                                var key = netMsg.Param.key;
+                                var value = snapshot.GetValueData(tableid, key);
+                                Param param = new Param();
+                                param.snapid = snapshot.DataHeight;
+                                param.result = true;
+                                param.value = value;
+                                param.key = key;
+                                param.tableid = tableid;
+                                netMsgBack = NetMessage.Create(cmd,param,id);
                                 return netMsgBack;
                             }
                         case "_db.snapshot.newiterator":
                             {
-                                ISnapShot snapshot = peerSnapshots[peerid + netMsg.ID];
-                                var beginKey = netMsg.Params[0].key;
-                                var endKey = netMsg.Params[1].key;
-                                var tableid = netMsg.Params[0].tableid;
+                                ISnapShot snapshot = peerSnapshots[peerid+netMsg.Param.snapid.ToString()];
+                                var beginKey = netMsg.Param.key;
+                                var endKey = netMsg.Param.value;
+                                var tableid = netMsg.Param.tableid;
                                 var iter = snapshot.CreateKeyIterator(tableid, beginKey, endKey);
                                 var itid = IteratorID;
-                                peerKeyIterator[peerid + itid.ToString()] = iter;
-                                netMsgBack.AddParam(new Param() { result = true,value = BitConverter.GetBytes(itid)});
+                                peerKeyIterator[peerid+ itid.ToString()] = iter;
+                                var p = new Param() { result = true,itid = itid};
+                                netMsgBack = NetMessage.Create(cmd,p,id);
                                 return netMsgBack;
                             }
                         case "_db.iterator.current":
                             {
-                                IKeyIterator keyIterator = peerKeyIterator[peerid + netMsg.ID];
+                                IKeyIterator keyIterator = peerKeyIterator[peerid+netMsg.Param.itid.ToString()];
                                 var cur = keyIterator.Current;
                                 Param param = new Param();
+                                param.itid = netMsg.Param.itid;
                                 param.result = true;
                                 param.value = cur;
-                                netMsgBack.AddParam(param);
+                                netMsgBack = NetMessage.Create(cmd, param, id);
                                 return netMsgBack;
                             }
                         case "_db.iterator.next":
                             {
-                                IKeyIterator keyIterator = peerKeyIterator[peerid + netMsg.ID];
-                                keyIterator.MoveNext();
-                                var cur = keyIterator.Current;
+                                IKeyIterator keyIterator = peerKeyIterator[peerid+netMsg.Param.itid.ToString()];
+                                var result = keyIterator.MoveNext();
                                 Param param = new Param();
-                                param.result = true;
-                                param.value = cur;
-                                netMsgBack.AddParam(param);
+                                param.itid = netMsg.Param.itid;
+                                param.result = result;
+                                netMsgBack = NetMessage.Create(cmd,param,id);
+                                return netMsgBack;
+                            }
+                        case "_db.iterator.seektofirst":
+                            {
+                                IKeyIterator keyIterator = peerKeyIterator[peerid + netMsg.Param.itid.ToString()];
+                                keyIterator.SeekToFirst();
+                                var p = new Param() { result = true ,itid = netMsg.Param.itid};
+                                netMsgBack = NetMessage.Create(cmd,p,id);
                                 return netMsgBack;
                             }
                         case "_db.iterator.reset":
                             {
-                                IKeyIterator keyIterator = peerKeyIterator[peerid+netMsg.ID];
+                                IKeyIterator keyIterator = peerKeyIterator[peerid + netMsg.Param.itid.ToString()];
                                 keyIterator.Reset();
                                 Param param = new Param();
                                 param.result = true;
-                                netMsgBack.AddParam(param);
+                                param.itid = netMsg.Param.itid;
+                                netMsgBack = NetMessage.Create(cmd,param,id);
                                 return netMsgBack;
                             }
                         default:
@@ -178,7 +197,7 @@ namespace NEL.SimpleDB.Server
                 }
                 catch (Exception e)
                 {
-                    netMsgBack.AddParam(new Param() { error = Encoding.UTF8.GetBytes(e.Message) });
+                    netMsgBack = NetMessage.Create(cmd,new Param() { error = Encoding.UTF8.GetBytes(e.Message) },id);
                     return netMsgBack;
                 }
 

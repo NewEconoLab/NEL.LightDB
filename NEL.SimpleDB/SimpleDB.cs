@@ -247,6 +247,7 @@ namespace NEL.SimpleDB
                 }
             }
         }
+
         /// <summary>
         /// 对snapshot的引用计数加锁，保证处理是线程安全的
         /// </summary>
@@ -303,7 +304,7 @@ namespace NEL.SimpleDB
     }
     public interface IKeyIterator : IEnumerator<byte[]>
     {
-
+        void SeekToFirst();
     }
     public interface IKeyFinder : IEnumerable<byte[]>
     {
@@ -316,6 +317,7 @@ namespace NEL.SimpleDB
         {
             get;
         }
+        int wbcount { get;}
         byte[] GetData(byte[] finalkey);
         void CreateTable(byte[] tableid, byte[] finaldata);
         void DeleteTable(byte[] tableid);
@@ -335,6 +337,7 @@ namespace NEL.SimpleDB
         //RocksDbSharp.RocksDb db;
         public IntPtr dbPtr;
         public SnapShot _snapshot;
+        public int wbcount { get; private set; }
         public ISnapShot snapshot
         {
             get
@@ -377,6 +380,7 @@ namespace NEL.SimpleDB
 
         private void PutDataFinal(byte[] finalkey, byte[] value)
         {
+            wbcount++;
             var hexkey = LightDB.Helper.ToString_Hex(finalkey);
             cache[hexkey] = value;
             RocksDbSharp.Native.Instance.rocksdb_writebatch_put(batchptr, finalkey, (ulong)finalkey.Length, value, (ulong)value.Length);
@@ -384,6 +388,7 @@ namespace NEL.SimpleDB
 
         private void DeleteFinal(byte[] finalkey)
         {
+            wbcount++;
             var hexkey = LightDB.Helper.ToString_Hex(finalkey);
             cache.Remove(hexkey);
             RocksDbSharp.Native.Instance.rocksdb_writebatch_delete(batchptr, finalkey, (ulong)finalkey.Length);
@@ -561,6 +566,12 @@ namespace NEL.SimpleDB
             }
             return true;
         }
+
+        public void SeekToFirst()
+        {
+            RocksDbSharp.Native.Instance.rocksdb_iter_seek_to_first(itPtr);
+        }
+
         public bool MoveNext()
         {
             if (bInit == false)
