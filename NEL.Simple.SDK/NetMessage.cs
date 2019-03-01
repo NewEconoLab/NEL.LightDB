@@ -51,23 +51,47 @@ namespace NEL.Simple.SDK
 
         public void Pack(System.IO.Stream stream)
         {
-            var strbuf = System.Text.Encoding.UTF8.GetBytes(this.Cmd);
-            var idbuf = System.Text.Encoding.UTF8.GetBytes(this.ID);
-            if (strbuf.Length > 255)
-                throw new Exception("too long cmd.");
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
                 //emit msg
                 {
-                    ms.WriteByte((byte)strbuf.Length);
-                    ms.Write(strbuf, 0, strbuf.Length);
+                    if (this.Cmd == null)
+                    {
+                        ms.WriteByte((byte)0);
+                    }
+                    else
+                    {
+                        ms.WriteByte((byte)1);
+                        var strbuf = System.Text.Encoding.UTF8.GetBytes(this.Cmd);
+                        ms.WriteByte((byte)strbuf.Length);
+                        ms.Write(strbuf, 0, strbuf.Length);
+                        if (strbuf.Length > 255)
+                            throw new Exception("too long cmd.");
+                    }
 
-                    ms.WriteByte((byte)idbuf.Length);
-                    ms.Write(idbuf, 0, idbuf.Length);
+                    if (this.ID == null)
+                    {
+                        ms.WriteByte((byte)0);
+                    }
+                    else
+                    {
+                        var idbuf = System.Text.Encoding.UTF8.GetBytes(this.ID);
+                        ms.WriteByte((byte)1);
+                        ms.WriteByte((byte)idbuf.Length);
+                        ms.Write(idbuf, 0, idbuf.Length);
+                    }
 
-                    var itembuf = Param.Serialize(Param);
-                    //stream.Write(BitConverter.GetBytes(itembuf.Length), 0, 4);
-                    ms.Write(itembuf, 0, itembuf.Length);
+                    if (this.Param == null)
+                    {
+                        ms.WriteByte((byte)0);
+                    }
+                    else
+                    {
+                        ms.WriteByte((byte)1);
+                        var itembuf = Param.Serialize(Param);
+                        //stream.Write(BitConverter.GetBytes(itembuf.Length), 0, 4);
+                        ms.Write(itembuf, 0, itembuf.Length);
+                    }
                 }
                 var len = (UInt32)ms.Length;
                 stream.Write(BitConverter.GetBytes(len), 0, 4);
@@ -84,17 +108,41 @@ namespace NEL.Simple.SDK
             var posstart = stream.Position;
             NetMessage msg = new NetMessage();
             {//read msg
-                var cl = stream.ReadByte();
-                var strbuf = new byte[cl];
-                stream.Read(strbuf, 0, cl);
-                msg.Cmd = System.Text.Encoding.UTF8.GetString(strbuf);
+                var isnull = stream.ReadByte();
+                if (isnull != 0)
+                {
+                    var cl = stream.ReadByte();
+                    var strbuf = new byte[cl];
+                    stream.Read(strbuf, 0, cl);
+                    msg.Cmd = System.Text.Encoding.UTF8.GetString(strbuf);
+                }
+                else
+                {
+                    msg.Cmd = null;
+                }
 
-                var il = stream.ReadByte();
-                var idbuf = new byte[il];
-                stream.Read(idbuf, 0, il);
-                msg.ID = System.Text.Encoding.UTF8.GetString(idbuf);
+                isnull = stream.ReadByte();
+                if (isnull != 0)
+                {
+                    var il = stream.ReadByte();
+                    var idbuf = new byte[il];
+                    stream.Read(idbuf, 0, il);
+                    msg.ID = System.Text.Encoding.UTF8.GetString(idbuf);
+                }
+                else
+                {
+                    msg.ID = null;
+                }
 
-                msg.Param = Param.Deserialize(stream);
+                isnull = stream.ReadByte();
+                if (isnull != 0)
+                {
+                    msg.Param = Param.Deserialize(stream);
+                }
+                else
+                {
+                    msg.Param = null;
+                }
 
             }
             var posend = stream.Position;
@@ -119,42 +167,108 @@ namespace NEL.Simple.SDK
 
         public static byte[] Serialize(Param _param)
         {
-            if(_param.tableid.Length>255)
-                throw new Exception("too long tableid");
-            if (_param.key.Length > 255)
-                throw new Exception("too long key");
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
                 //写入snapid
-                var bytes = BitConverter.GetBytes(_param.snapid);
-                ms.WriteByte((byte)bytes.Length);
-                ms.Write(bytes,0, bytes.Length);
+                if (_param.snapid == null)
+                {
+                    ms.WriteByte((byte)0);
+
+                }
+                else
+                {
+                    ms.WriteByte((byte)1);
+                    var bytes = BitConverter.GetBytes(_param.snapid);
+                    ms.WriteByte((byte)bytes.Length);
+                    ms.Write(bytes, 0, bytes.Length);
+                }
+
                 //写入wbid
-                bytes = BitConverter.GetBytes(_param.wbid);
-                ms.WriteByte((byte)bytes.Length);
-                ms.Write(bytes, 0, bytes.Length);
+                if (_param.wbid == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    var bytes = BitConverter.GetBytes(_param.wbid);
+                    ms.WriteByte((byte)bytes.Length);
+                    ms.Write(bytes, 0, bytes.Length);
+                }
+
                 //写入itid
-                bytes = BitConverter.GetBytes(_param.itid);
-                ms.WriteByte((byte)bytes.Length);
-                ms.Write(bytes, 0, bytes.Length);
+                if (_param.itid == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    var bytes = BitConverter.GetBytes(_param.itid);
+                    ms.WriteByte((byte)bytes.Length);
+                    ms.Write(bytes, 0, bytes.Length);
+                }
+
                 //写入tableid
-                ms.WriteByte((byte)_param.tableid.Length);
-                ms.Write(_param.tableid, 0, _param.tableid.Length);
+                if (_param.tableid == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    ms.WriteByte((byte)_param.tableid.Length);
+                    ms.Write(_param.tableid, 0, _param.tableid.Length);
+                }
+
                 //写入key
-                ms.WriteByte((byte)_param.key.Length);
-                ms.Write(_param.key, 0, _param.key.Length);
+                if (_param.key == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    ms.WriteByte((byte)_param.key.Length);
+                    ms.Write(_param.key, 0, _param.key.Length);
+                }
                 //写入value  value的最大长度是 UInt32
-                var valuelenbuf = BitConverter.GetBytes((UInt32)_param.value.Length);
-                ms.Write(valuelenbuf, 0, 4);
-                ms.Write(_param.value, 0, _param.value.Length);
+                if (_param.value == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    var valuelenbuf = BitConverter.GetBytes((UInt32)_param.value.Length);
+                    ms.Write(valuelenbuf, 0, 4);
+                    ms.Write(_param.value, 0, _param.value.Length);
+                }
+
                 //写入result
-                byte[] _result = BitConverter.GetBytes(_param.result);
-                ms.WriteByte((byte)_result.Length);
-                ms.Write(_result,0, _result.Length);
+                if (_param.result == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    byte[] _result = BitConverter.GetBytes(_param.result);
+                    ms.WriteByte((byte)_result.Length);
+                    ms.Write(_result, 0, _result.Length);
+                }
                 //写入error 最大长度是 UInt32
-                var errorlenbuf = BitConverter.GetBytes((UInt32)_param.error.Length);
-                ms.Write(errorlenbuf, 0, 4);
-                ms.Write(_param.error, 0, _param.error.Length);
+                if (_param.error == null)
+                {
+                    ms.WriteByte(0);
+                }
+                else
+                {
+                    ms.WriteByte(1);
+                    var errorlenbuf = BitConverter.GetBytes((UInt32)_param.error.Length);
+                    ms.Write(errorlenbuf, 0, 4);
+                    ms.Write(_param.error, 0, _param.error.Length);
+                }
 
                 return ms.ToArray();
             }
@@ -164,49 +278,115 @@ namespace NEL.Simple.SDK
         {
             Param param = new Param();
             //snapid
-            var snapidlen = stream.ReadByte();
-            var snapidbuf = new byte[snapidlen];
-            stream.Read(snapidbuf,0,snapidlen);
-            param.snapid = BitConverter.ToUInt64(snapidbuf,0);
+            var isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var snapidlen = stream.ReadByte();
+                var snapidbuf = new byte[snapidlen];
+                stream.Read(snapidbuf, 0, snapidlen);
+                param.snapid = BitConverter.ToUInt64(snapidbuf, 0);
+            }
+            else
+            {//不可能为null
+            }
+
             //wbid
-            var wbidlen = stream.ReadByte();
-            var wbidbuf = new byte[wbidlen];
-            stream.Read(wbidbuf, 0, wbidlen);
-            param.wbid = BitConverter.ToUInt64(wbidbuf, 0);
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var wbidlen = stream.ReadByte();
+                var wbidbuf = new byte[wbidlen];
+                stream.Read(wbidbuf, 0, wbidlen);
+                param.wbid = BitConverter.ToUInt64(wbidbuf, 0);
+            }
+            else
+            {
+            }
             //itid
-            var itidlen = stream.ReadByte();
-            var itidbuf = new byte[itidlen];
-            stream.Read(itidbuf, 0, itidlen);
-            param.itid = BitConverter.ToUInt64(itidbuf, 0);
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var itidlen = stream.ReadByte();
+                var itidbuf = new byte[itidlen];
+                stream.Read(itidbuf, 0, itidlen);
+                param.itid = BitConverter.ToUInt64(itidbuf, 0);
+            }
+            else
+            {
+            }
+
             //tableid
-            var tableidlen = stream.ReadByte();
-            var tableidbuf = new byte[tableidlen];
-            stream.Read(tableidbuf,0,tableidlen);
-            param.tableid = tableidbuf;
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var tableidlen = stream.ReadByte();
+                var tableidbuf = new byte[tableidlen];
+                stream.Read(tableidbuf, 0, tableidlen);
+                param.tableid = tableidbuf;
+            }
+            else
+            {
+                param.tableid = null;
+            }
             //key
-            var keylen = stream.ReadByte();
-            var keybuf = new byte[keylen];
-            stream.Read(keybuf, 0, keylen);
-            param.key = keybuf;
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var keylen = stream.ReadByte();
+                var keybuf = new byte[keylen];
+                stream.Read(keybuf, 0, keylen);
+                param.key = keybuf;
+            }
+            else
+            {
+                param.key = null;
+            }
+
             //value value的长度定义的是四字节
-            var valuelenbuf = new byte[4];
-            stream.Read(valuelenbuf, 0,4);
-            var valuelen = BitConverter.ToUInt32(valuelenbuf,0);
-            var valuebuf = new byte[valuelen];
-            stream.Read(valuebuf, 0, (int)valuelen);
-            param.value = valuebuf;
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var valuelenbuf = new byte[4];
+                stream.Read(valuelenbuf, 0, 4);
+                var valuelen = BitConverter.ToUInt32(valuelenbuf, 0);
+                var valuebuf = new byte[valuelen];
+                stream.Read(valuebuf, 0, (int)valuelen);
+                param.value = valuebuf;
+            }
+            else
+            {
+                param.value = null;
+            }
+
             //result
-            var resultlen = stream.ReadByte();
-            var resultbuf = new byte[resultlen];
-            stream.Read(resultbuf,0,resultlen);
-            param.result = BitConverter.ToBoolean(resultbuf,0);
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var resultlen = stream.ReadByte();
+                var resultbuf = new byte[resultlen];
+                stream.Read(resultbuf, 0, resultlen);
+                param.result = BitConverter.ToBoolean(resultbuf, 0);
+            }
+            else
+            {//bool类型不可能为null
+
+            }
+
             //error
-            var errorlenbuf = new byte[4];
-            stream.Read(errorlenbuf, 0, 4);
-            var errorlen = BitConverter.ToUInt32(errorlenbuf, 0);
-            var errorbuf = new byte[errorlen];
-            stream.Read(errorbuf, 0, (int)errorlen);
-            param.error = errorbuf;
+            isnull = stream.ReadByte();
+            if (isnull != 0)
+            {
+                var errorlenbuf = new byte[4];
+                stream.Read(errorlenbuf, 0, 4);
+                var errorlen = BitConverter.ToUInt32(errorlenbuf, 0);
+                var errorbuf = new byte[errorlen];
+                stream.Read(errorbuf, 0, (int)errorlen);
+                param.error = errorbuf;
+            }
+            else
+            {
+                param.error = null;
+            }
 
             return param;
         }

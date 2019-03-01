@@ -20,6 +20,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.Network.P2P.Payloads;
+using System.Collections.Generic;
 
 namespace NEL.Cli.ApiServer
 {
@@ -36,6 +37,7 @@ namespace NEL.Cli.ApiServer
             setting = new Setting();
         }
 
+        public DataCache<string, byte[]> keyValueP = new DataCache<string, byte[]>();
         public DataCache<string, byte[]> storageCache = new DataCache<string, byte[]>();
         public DataCache<string, BlockState> blockstateCache = new DataCache<string, BlockState>();
         public DataCache<string, Transaction> transactionCache = new DataCache<string, Transaction>();
@@ -232,16 +234,20 @@ namespace NEL.Cli.ApiServer
                         NetMessage netMessage = Protocol_GetBlock.CreateSendMsg(hash.ToArray(), identity.ToString(), 0,true);
                         actor.Tell(netMessage.ToBytes());
                         var blockstate = await blockstateCache.Get(netMessage.ID);
-                        var transactions = new Transaction[] { };
+                        var transactions = new List<Transaction>();
                         //获取这个block中的所有交易
                         {
-                            //UInt256[] hashes = blockstate.TrimmedBlock.Hashes;
-                            ////简单处理 key可能有重复
-                            //var key = hashes.First().ToString()+hashes.Length+hashes.Last().ToString();
-                            //Identity identity_tran = new Identity(request["host"].AsString(), "gettransaction", request["id"].AsString(), key);
-                            //NetMessage netMessage_tran = Protocol_GetTransaction.CreateSendMsg(hashes, identity_tran.ToString(), 0,true);
-                            //actor.Tell(netMessage_tran.ToBytes());
-                            //transactions = await transactionCache.Get(netMessage_tran.ID);
+                            UInt256[] hashes = blockstate.TrimmedBlock.Hashes;
+                            //简单处理 key可能有重复
+                            var key = hashes.First().ToString()+hashes.Length+hashes.Last().ToString();
+                            Identity identity_tran = new Identity(request["host"].AsString(), "gettransaction", request["id"].AsString(), key);
+                            for (var i = 0; i < hashes.Length; i++)
+                            {
+                                NetMessage netMessage_tran = Protocol_GetTransaction.CreateSendMsg(hashes[i], identity_tran.ToString(), 0, true);
+                                actor.Tell(netMessage_tran.ToBytes());
+                                var transaction = await transactionCache.Get(netMessage_tran.ID);
+                                transactions.Add(transaction);
+                            }
                         }
                         block = new Block
                         {
@@ -253,7 +259,7 @@ namespace NEL.Cli.ApiServer
                             ConsensusData = blockstate.TrimmedBlock.ConsensusData,
                             NextConsensus = blockstate.TrimmedBlock.NextConsensus,
                             Witness = blockstate.TrimmedBlock.Witness,
-                            Transactions = transactions
+                            Transactions = transactions.ToArray()
                         };
                         var response = CreateResponse(identity.ID);
                         bool verbose = _params.Count >= 2 && _params[1].AsBooleanOrDefault(false);
@@ -280,6 +286,11 @@ namespace NEL.Cli.ApiServer
             {
                 NetMessage netMsg = NetMessage.Unpack(ms);
                 Identity identity = Identity.ToIdentity(netMsg.ID);
+                if (identity.Mehotd == "getvalue")
+                {
+                    byte[] value = Protocol_GetValue.PraseRecvMsg(netMsg);
+                    keyValueP.Add(netMsg.ID,value);
+                }
                 if (identity.Mehotd == "getstorage")
                 {
                     Protocol_GetStorage.message message = Protocol_GetStorage.PraseRecvMsg(netMsg);

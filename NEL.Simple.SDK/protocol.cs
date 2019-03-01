@@ -4,9 +4,9 @@ using System.Text;
 using System.Linq;
 using Neo.Network.P2P.Payloads;
 using Neo.Ledger;
-using LightDB;
 using Neo.IO;
 using Neo;
+using NEL.Simple.SDK.Helper;
 
 namespace NEL.Simple.SDK
 {
@@ -49,9 +49,9 @@ namespace NEL.Simple.SDK
 
     public static class Protocol_Put
     {
-        public static NetMessage CreateSendMsg(UInt64 wbid, byte[] key,byte[] value,string id = "")
+        public static NetMessage CreateSendMsg(UInt64 wbid, byte[] tableid,byte[] key,byte[] value,string id = "")
         {
-            var p = new Param() {wbid = wbid,key = key,value = value };
+            var p = new Param() {wbid = wbid,tableid = tableid,key = key,value = value };
             NetMessage netMessage = NetMessage.Create("_db.put", p,id);
             return netMessage;
         }
@@ -59,9 +59,9 @@ namespace NEL.Simple.SDK
 
     public static class Protocol_Delete
     {
-        public static NetMessage CreateSendMsg(UInt64 wbid,byte[] key,string id = "")
+        public static NetMessage CreateSendMsg(UInt64 wbid,byte[] tableid,byte[] key,string id = "")
         {
-            var p = new Param() { wbid = wbid, key = key};
+            var p = new Param() { wbid = wbid, tableid = tableid, key = key};
             NetMessage netMessage = NetMessage.Create("_db.delete", p, id);
             return netMessage;
         }
@@ -137,12 +137,11 @@ namespace NEL.Simple.SDK
         }
     }
 
-
     public static class Protocol_GetValue
     {
-        public static NetMessage CreateSendMsg( byte[] key,string id = "", UInt64 snapid = 0, bool useServerSnap =false)
+        public static NetMessage CreateSendMsg(byte[] tableid, byte[] key,string id = "", UInt64 snapid = 0, bool useServerSnap =false)
         {
-            var p = new Param() { snapid = snapid,key = key};
+            var p = new Param() { snapid = snapid,key = key,tableid = tableid};
             NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue",p ,id);
             if (useServerSnap)
                 netMessage = NetMessage.Create("_db.getvalue", p,id);
@@ -155,7 +154,6 @@ namespace NEL.Simple.SDK
         }
     }
 
-
     public static class Protocol_GetStorage
     {
         public class message
@@ -166,7 +164,7 @@ namespace NEL.Simple.SDK
 
         public static NetMessage CreateSendMsg(byte[] key, string id = "", UInt64 snapid = 0, bool useServerSnap = false)
         {
-            Param param = new Param() { snapid = 0,tableid = new byte[] { }, key = (new byte[] { Prefixes.ST_Storage }).Concat(key).ToArray() };
+            Param param = new Param() { snapid = 0,tableid = Prefixes.ST_Storage.ToBytes(), key =key };
             NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue",param ,id);
             if (useServerSnap)
                 netMessage = NetMessage.Create("_db.getvalue", param, id);
@@ -184,7 +182,7 @@ namespace NEL.Simple.SDK
     {
         public static NetMessage CreateSendMsg(byte[] key, string id = "", UInt64 snapid = 0, bool useServerSnap = false)
         {
-            Param param = new Param() {snapid = snapid, tableid = new byte[] { }, key = (new byte[] { Prefixes.DATA_Block }).Concat(key).ToArray() };
+            Param param = new Param() {snapid = snapid, tableid = Prefixes.DATA_Block.ToBytes(), key =key};
             NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue", param, id);
             if (useServerSnap)
                 netMessage = NetMessage.Create("_db.getvalue", param, id);
@@ -193,7 +191,7 @@ namespace NEL.Simple.SDK
 
         public static BlockState PraseRecvMsg(NetMessage netMessage)
         {
-            return DBValue.FromRaw(netMessage.Param.value).value.AsSerializable<BlockState>();
+            return netMessage.Param.value.AsSerializable<BlockState>();
         }
     }
 
@@ -201,7 +199,7 @@ namespace NEL.Simple.SDK
     {
         public static NetMessage CreateSendMsg(UInt256 key, string id = "", UInt64 snapid = 0, bool useServerSnap = false)
         {
-            Param param = new Param() { snapid = snapid,tableid = new byte[] { }, key = (new byte[] { Prefixes.DATA_Transaction }).Concat(key.ToArray()).ToArray() };
+            Param param = new Param() { snapid = snapid,tableid = Prefixes.DATA_Transaction.ToBytes(), key = key.ToArray()};
             NetMessage netMessage = NetMessage.Create("_db.snapshot.getvalue", param, id);
             if (useServerSnap)
                 netMessage = NetMessage.Create("_db.getvalue", param, id);
@@ -211,7 +209,7 @@ namespace NEL.Simple.SDK
         public static Transaction PraseRecvMsg(NetMessage netMessage)
         {
 
-            return DBValue.FromRaw(netMessage.Param.value).value.AsSerializable<TransactionState>().Transaction;
+            return netMessage.Param.value.AsSerializable<TransactionState>().Transaction;
         }
     }
 }

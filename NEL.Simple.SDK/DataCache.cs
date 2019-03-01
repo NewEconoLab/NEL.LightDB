@@ -45,7 +45,6 @@ namespace NEL.Simple.SDK
                             ConcurrentQueue<TValue> q;
                             dictionary.TryRemove(key, out q);
                         }
-                        //Console.WriteLine("222222222222222|" + key + "|" + (value as Param).ToString());
                         if (value != null)
                             return value;
                     }

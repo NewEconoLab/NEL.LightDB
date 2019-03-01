@@ -304,6 +304,7 @@ namespace NEL.SimpleDB
     }
     public interface IKeyIterator : IEnumerator<byte[]>
     {
+        UInt64 HandleID { get; }
         void SeekToFirst();
     }
     public interface IKeyFinder : IEnumerable<byte[]>
@@ -317,6 +318,7 @@ namespace NEL.SimpleDB
         {
             get;
         }
+        UInt64 Wbid { get; }
         int wbcount { get;}
         byte[] GetData(byte[] finalkey);
         void CreateTable(byte[] tableid, byte[] finaldata);
@@ -345,6 +347,15 @@ namespace NEL.SimpleDB
                 return _snapshot;
             }
         }
+
+        public UInt64 Wbid
+        {
+            get
+            {
+                return (UInt64)batchptr.ToInt64();
+            }
+        }
+
         //public RocksDbSharp.WriteBatch batch;
         public IntPtr batchptr;
         Dictionary<string, byte[]> cache;
