@@ -13,22 +13,31 @@ namespace NEL.Simple.SDK.Helper
         private static Dictionary<string, MongoClient> clientPool = new Dictionary<string, MongoClient>();
         private static MongoClient GetOrAdd(string mongodbConn)
         {
-            if (clientPool.ContainsKey(mongodbConn))
-                return clientPool[mongodbConn];
-            else
+            lock (clientPool)
             {
-                var client = new MongoClient(mongodbConn);
-                clientPool.Add(mongodbConn, client);
-                return client;
+                if (clientPool.ContainsKey(mongodbConn))
+                    return clientPool[mongodbConn];
+                else
+                {
+                    var client = new MongoClient(mongodbConn);
+                    clientPool.Add(mongodbConn, client);
+                    return client;
+                }
             }
         }
         private static IMongoDatabase GetDatabase(this MongoClient client, string mongodbDatabase)
         {
-            return client.GetDatabase(mongodbDatabase);
+            lock (client)
+            {
+                return client.GetDatabase(mongodbDatabase);
+            }
         }
         private static IMongoCollection<T> GetMongoCollection<T>(this IMongoDatabase database, string mongodbColl)
         {
-            return database.GetCollection<T>(mongodbColl);
+            lock (database)
+            {
+                return database.GetCollection<T>(mongodbColl);
+            }
         }
         public static void InsertOne<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, T data)
         {

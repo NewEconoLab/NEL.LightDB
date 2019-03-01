@@ -2,7 +2,7 @@
   "port": 8080,
   "bindAddress": "0.0.0.0",
   "server_storage_path": "./rocksdb",
-  "Conn_Track": "mongodb://nelDataStorage:NELqingmingzi1128@dds-bp1df57f935202e41897-pub.mongodb.rds.aliyuncs.com:3717,dds-bp1df57f935202e42907-pub.mongodb.rds.aliyuncs.com:3717/NeoBlockBaseData?replicaSet=mgset-10445701",
-  "DataBase_Track": "NeoBlockBaseData",
+  "Conn_Track": "mongodb://metadataCheckStorage:NELqingmingzi1128@dds-bp1df57f935202e41897-pub.mongodb.rds.aliyuncs.com:3717,dds-bp1df57f935202e42907-pub.mongodb.rds.aliyuncs.com:3717/NEO_Metadata_Check?replicaSet=mgset-10445701",
+  "DataBase_Track": "NEO_Metadata_Check",
   "Coll_Track": "Test"
 }
