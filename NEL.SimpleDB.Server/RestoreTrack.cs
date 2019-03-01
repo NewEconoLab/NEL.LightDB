@@ -27,14 +27,12 @@ namespace NEL.SimpleDB.Server
                     //获取高度
                     var curHeight = StorageService.maindb.UseSnapShot().DataHeight;
                     //从mongo中获取data然后存入到本地
-                    Console.WriteLine("00000height:" + curHeight + "    time:" + DateTime.UtcNow);
-                    var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll,"{height:{\"$gte\":"+ curHeight + ",\"$lte\":"+(curHeight + 10000)+"}}", "{height:1}");
-                    Console.WriteLine("11111height:" + curHeight + "    time:" + DateTime.UtcNow);
+                    var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll,"{height:{\"$gte\":"+ curHeight + ",\"$lte\":"+(curHeight + 5000)+"}}", "{height:1}");
                     if (list.Count > 0)
                     {
                         Restore(curHeight, list);
                     }
-                    Console.WriteLine("22222height:" + curHeight + "    time:" + DateTime.UtcNow);
+                    Console.WriteLine("height:" + curHeight + "    time:" + DateTime.UtcNow);
                 }
             });
             task.Start();
