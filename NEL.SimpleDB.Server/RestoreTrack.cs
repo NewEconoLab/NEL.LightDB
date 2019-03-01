@@ -25,28 +25,32 @@ namespace NEL.SimpleDB.Server
                 while (true)
                 {
                     //获取高度
-                    var height = StorageService.maindb.UseSnapShot().DataHeight;
+                    var curHeight = StorageService.maindb.UseSnapShot().DataHeight;
                     //从mongo中获取data然后存入到本地
-                    var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll, "{height:" + height + "}");
+                    var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll,"{height:{\"$gte\":"+ curHeight + ",\"$lte\":"+(curHeight + 10000)+"}}", "{height:1}");
                     if (list.Count > 0)
                     {
-                        Restore(list);
+                        Restore(curHeight, list);
                     }
-                    if (height % 10000 == 0)
-                    {
-                        Console.WriteLine("height:"+height+"    time:"+DateTime.UtcNow);
-                    }
+                    Console.WriteLine("height:" + curHeight + "    time:" + DateTime.UtcNow);
                 }
             });
             task.Start();
 
         }
 
-        public void Restore(IList<TrackForMongodb> list)
+        public void Restore(UInt64 curHeight, IList<TrackForMongodb> list)
         {
             IWriteBatch wb = StorageService.maindb.CreateWriteBatch();
             foreach (var l in list)
             {
+                var lHeight = l.height;
+                if (lHeight > curHeight)
+                {
+                    StorageService.maindb.WriteBatch(wb);
+                    wb = StorageService.maindb.CreateWriteBatch();
+                    curHeight++;
+                }
                 if (l.state == (byte)Neo.IO.Caching.TrackState.Added)
                 {
                     wb.Put(l.tableid.ToBytes(),l.key?.Bytes,l.value?.Bytes);
@@ -60,7 +64,6 @@ namespace NEL.SimpleDB.Server
                     wb.Put(l.tableid.ToBytes(), l.key?.Bytes, l.value?.Bytes);
                 }
             }
-            StorageService.maindb.WriteBatch(wb);
         }
     }
 }

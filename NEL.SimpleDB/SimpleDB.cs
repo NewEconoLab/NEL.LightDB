@@ -69,6 +69,7 @@ namespace NEL.SimpleDB
             wb.Put(new byte[1] { 0x01}, "_height".ToBytes_UTF8Encode(),BitConverter.GetBytes(finalheight));
 
             RocksDbSharp.Native.Instance.rocksdb_write(this.dbPtr, this.defaultWriteOpPtr, (wb as WriteBatch).batchptr);
+            (wb as WriteBatch).Dispose();
             snapshotLast.Dispose();
             snapshotLast = CreateSnapInfo();
             snapshotLast.AddRef();
@@ -335,6 +336,18 @@ namespace NEL.SimpleDB
             //this.batch = new RocksDbSharp.WriteBatch();
             this._snapshot = snapshot;
             this.cache = new Dictionary<string, byte[]>();
+        }
+
+        ~WriteBatch()
+        {
+            if (batchptr != IntPtr.Zero)
+            {
+                RocksDbSharp.Native.Instance.rocksdb_writebatch_destroy(batchptr);
+                batchptr = IntPtr.Zero;
+                //batch.Dispose();
+                //batch = null;
+            }
+            _snapshot.Dispose();
         }
         //RocksDbSharp.RocksDb db;
         public IntPtr dbPtr;
