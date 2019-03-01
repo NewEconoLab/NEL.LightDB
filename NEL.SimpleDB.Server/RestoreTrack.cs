@@ -26,7 +26,6 @@ namespace NEL.SimpleDB.Server
                 {
                     //获取高度
                     var height = StorageService.maindb.UseSnapShot().DataHeight;
-                    Console.WriteLine(height);
                     //从mongo中获取data然后存入到本地
                     var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll, "{height:" + height + "}");
                     if (list.Count > 0)
