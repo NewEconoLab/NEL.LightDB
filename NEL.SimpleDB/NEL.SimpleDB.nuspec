@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>NEL.SimpleDB</id>
+    <version>1.0.1</version>
+    <title>NEL.SimpleDB</title>
+    <authors>NEL</authors>
+    <owners>NEL</owners>
+    <licenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</licenseUrl>
+    <projectUrl>https://github.com/NewEconoLab</projectUrl>
+    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NEL.SimpleDB</description>
+    <releaseNotes>Summary of changes made in this release of the package.</releaseNotes>
+    <copyright>Copyright 2019</copyright>
+    <tags>nel db</tags>
+	<dependencies>
+      <dependency id="Newtonsoft.Json" version="12.0.1" />
+	  <dependency id="System.Reflection.Emit" version="4.3.0" />
+    </dependencies>
+    <contentFiles>
+      <files include="any/netstandard2.0/native/librocksdb-5.17.0.so" buildAction="Content" copyToOutput="true"/>
+      <files include="any/netstandard2.0/native/libsnappy.so.1.1.5" buildAction="Content" copyToOutput="true"/>
+      <files include="any/netstandard2.0/native/rocksdb-5.17.0.dll" buildAction="Content" copyToOutput="true"/>
+    </contentFiles>
+  </metadata>
+</package>

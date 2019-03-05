@@ -8,9 +8,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\NEL.common\NEL.Common.csproj" />
-    <ProjectReference Include="..\NEL.Peer.Tcp.Interface\NEL.Peer.Tcp.Interface.csproj" />
+    <PackageReference Include="NEL.Common" Version="1.0.1" />
+    <PackageReference Include="NEL.Peer.Tcp.Interface" Version="1.0.1" />
   </ItemGroup>
 
 </Project>

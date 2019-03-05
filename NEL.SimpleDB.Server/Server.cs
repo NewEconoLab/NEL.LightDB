@@ -1,5 +1,4 @@
-﻿using LightDB;
-using NEL.Simple.SDK;
+﻿using NEL.Simple.SDK;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -147,7 +146,7 @@ namespace NEL.SimpleDB.Server
                                 var iter = snapshot.CreateKeyIterator(tableid, beginKey, endKey);
                                 var itid = iter.HandleID;
                                 peerKeyIterator[itid] = iter;
-                                var p = new Param() { result = true,itid = itid};
+                                var p = new Param() { result = true,itid = itid,snapid = netMsg.Param.snapid};
                                 netMsgBack = NetMessage.Create(cmd,p,id);
                                 return netMsgBack;
                             }

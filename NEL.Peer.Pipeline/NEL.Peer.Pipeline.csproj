@@ -8,15 +8,14 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NEL.common\NEL.Common.csproj" />
-    <ProjectReference Include="..\NEL.Peer.Tcp.Interface\NEL.Peer.Tcp.Interface.csproj" />
-    <ProjectReference Include="..\NEL.Peer.Tcp.PeerV2\NEL.Peer.Tcp.PeerV2.csproj" />
+    <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
+    <PackageReference Include="NEL.Peer.Tcp.PeerV2" Version="1.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 
 </Project>

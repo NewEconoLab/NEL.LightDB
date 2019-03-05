@@ -1,5 +1,4 @@
-﻿using LightDB;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -83,7 +82,7 @@ namespace NEL.SimpleDB
         }
         public byte[] GetDirect(byte[] tableid, byte[] key)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, key);
+            var finalkey = Helper.CalcKey(tableid, key);
             return GetDirectFinal(finalkey);
         }
         public UInt64 GetUInt64Direct(byte[] tableid, byte[] key)
@@ -112,8 +111,8 @@ namespace NEL.SimpleDB
         }
         public void PutDirect(byte[] tableid, byte[] key, byte[] data)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, key);
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var finalkey = Helper.CalcKey(tableid, key);
+            var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
 
 
 
@@ -130,7 +129,7 @@ namespace NEL.SimpleDB
             }
             else
             {
-                if (LightDB.Helper.BytesEquals(vdata, data) == false)
+                if (Helper.BytesEquals(vdata, data) == false)
                     count++;
             }
             PutDirectFinal(finalkey, data);
@@ -141,9 +140,9 @@ namespace NEL.SimpleDB
         }
         public void DeleteDirect(byte[] tableid, byte[] key)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, key);
+            var finalkey = Helper.CalcKey(tableid, key);
 
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
             var countdata = GetDirectFinal(countkey);
             UInt32 count = 0;
             if (countdata != null)
@@ -163,8 +162,8 @@ namespace NEL.SimpleDB
         }
         public void CreateTableDirect(byte[] tableid, byte[] info)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var finalkey = Helper.CalcKey(tableid, null, SplitWord.TableInfo);
+            var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
             var data = GetDirectFinal(finalkey);
             if (data != null && data.Length != 0)
             {
@@ -182,7 +181,7 @@ namespace NEL.SimpleDB
         }
         public void DeleteTableDirect(byte[] tableid)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
+            var finalkey = Helper.CalcKey(tableid, null,SplitWord.TableInfo);
             //var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
             var vdata = GetDirectFinal(finalkey);
             if (vdata != null && vdata.Length != 0)
@@ -271,10 +270,9 @@ namespace NEL.SimpleDB
 
         public byte[] GetValueData(byte[] tableid, byte[] key)
         {
-            byte[] finialkey = LightDB.Helper.CalcKey(tableid, key);
+            byte[] finialkey = Helper.CalcKey(tableid, key);
             return RocksDbSharp.Native.Instance.rocksdb_get(this.dbPtr, this.readopHandle, finialkey);
             //(readOptions ?? DefaultReadOptions).Handle, key, keyLength, cf);
-
             //return this.db.Get(finialkey, null, readop);
         }
         public IKeyFinder CreateKeyFinder(byte[] tableid, byte[] beginkey = null, byte[] endkey = null)
@@ -284,13 +282,13 @@ namespace NEL.SimpleDB
         }
         public IKeyIterator CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null)
         {
-            var beginkey = LightDB.Helper.CalcKey(tableid, _beginkey);
-            var endkey = LightDB.Helper.CalcKey(tableid, _endkey);
+            var beginkey =Helper.CalcKey(tableid, _beginkey);
+            var endkey = Helper.CalcKey(tableid, _endkey);
             return new TableIterator(this, tableid, beginkey, endkey);
         }
         public byte[] GetTableInfoData(byte[] tableid)
         {
-            var tablekey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
+            var tablekey = Helper.CalcKey(tableid, null, SplitWord.TableInfo);
             var data = RocksDbSharp.Native.Instance.rocksdb_get(this.dbPtr, this.readopHandle, tablekey);
             if (data == null)
                 return null;
@@ -298,7 +296,7 @@ namespace NEL.SimpleDB
         }
         public uint GetTableCount(byte[] tableid)
         {
-            var tablekey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var tablekey = Helper.CalcKey(tableid, null,SplitWord.TableCount);
             var data = RocksDbSharp.Native.Instance.rocksdb_get(this.dbPtr, this.readopHandle, tablekey);
             return BitConverter.ToUInt32(data, 0);
         }
@@ -386,7 +384,7 @@ namespace NEL.SimpleDB
         }
         public byte[] GetData(byte[] finalkey)
         {
-            var hexkey = LightDB.Helper.ToString_Hex(finalkey);
+            var hexkey = Helper.ToString_Hex(finalkey);
             if (cache.ContainsKey(hexkey))
             {
                 return cache[hexkey];
@@ -405,7 +403,7 @@ namespace NEL.SimpleDB
         private void PutDataFinal(byte[] finalkey, byte[] value)
         {
             wbcount++;
-            var hexkey = LightDB.Helper.ToString_Hex(finalkey);
+            var hexkey = Helper.ToString_Hex(finalkey);
             cache[hexkey] = value;
             RocksDbSharp.Native.Instance.rocksdb_writebatch_put(batchptr, finalkey, (ulong)finalkey.Length, value, (ulong)value.Length);
         }
@@ -413,15 +411,15 @@ namespace NEL.SimpleDB
         private void DeleteFinal(byte[] finalkey)
         {
             wbcount++;
-            var hexkey = LightDB.Helper.ToString_Hex(finalkey);
+            var hexkey = Helper.ToString_Hex(finalkey);
             cache.Remove(hexkey);
             RocksDbSharp.Native.Instance.rocksdb_writebatch_delete(batchptr, finalkey, (ulong)finalkey.Length);
         }
 
         public void CreateTable(byte[] tableid, byte[] tableinfo)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var finalkey = Helper.CalcKey(tableid, null, SplitWord.TableInfo);
+            var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
             var data = GetData(finalkey);
             if (data != null && data.Length != 0)
             {
@@ -439,7 +437,7 @@ namespace NEL.SimpleDB
 
         public void DeleteTable(byte[] tableid)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableInfo);
+            var finalkey = Helper.CalcKey(tableid, null, SplitWord.TableInfo);
             //var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
             var vdata = GetData(finalkey);
             if (vdata != null && vdata.Length != 0)
@@ -449,8 +447,8 @@ namespace NEL.SimpleDB
         }
         public void Put(byte[] tableid, byte[] key, byte[] finaldata)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, key);
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var finalkey = Helper.CalcKey(tableid, key);
+            var countkey = Helper.CalcKey(tableid, null, SplitWord.TableCount);
 
 
 
@@ -467,7 +465,7 @@ namespace NEL.SimpleDB
             }
             else
             {
-                if (LightDB.Helper.BytesEquals(vdata, finaldata) == false)
+                if (Helper.BytesEquals(vdata, finaldata) == false)
                     count++;
             }
             PutDataFinal(finalkey, finaldata);
@@ -477,9 +475,9 @@ namespace NEL.SimpleDB
 
         public void Delete(byte[] tableid, byte[] key)
         {
-            var finalkey = LightDB.Helper.CalcKey(tableid, key);
+            var finalkey = Helper.CalcKey(tableid, key);
 
-            var countkey = LightDB.Helper.CalcKey(tableid, null, LightDB.SplitWord.TableCount);
+            var countkey = Helper.CalcKey(tableid, null,SplitWord.TableCount);
             var countdata = GetData(countkey);
             UInt32 count = 0;
             if (countdata != null)
@@ -499,15 +497,14 @@ namespace NEL.SimpleDB
         }
     }
 
-
     class TableKeyFinder : IKeyFinder
     {
         public TableKeyFinder(SnapShot _snapshot, byte[] _tableid, byte[] _beginkey, byte[] _endkey)
         {
             this.snapshot = _snapshot;
             this.tableid = _tableid;
-            this.beginkeyfinal = LightDB.Helper.CalcKey(_tableid, _beginkey);
-            this.endkeyfinal = LightDB.Helper.CalcKey(_tableid, _endkey);
+            this.beginkeyfinal = Helper.CalcKey(_tableid, _beginkey);
+            this.endkeyfinal = Helper.CalcKey(_tableid, _endkey);
         }
         SnapShot snapshot;
         byte[] tableid;

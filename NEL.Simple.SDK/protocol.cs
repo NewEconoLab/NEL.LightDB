@@ -2,10 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Neo.Network.P2P.Payloads;
-using Neo.Ledger;
-using Neo.IO;
-using Neo;
 using NEL.Simple.SDK.Helper;
 
 namespace NEL.Simple.SDK
@@ -79,9 +75,9 @@ namespace NEL.Simple.SDK
 
     public static class Protocol_CreateIterator
     {
-        public static NetMessage CreateSendMsg( UInt64 snapid,byte[] beginKey = null,byte[] endKey =null,string id="")
+        public static NetMessage CreateSendMsg( UInt64 snapid,byte[] tableid , byte[] beginKey = null,byte[] endKey =null,string id="")
         {
-            var p = new Param() { snapid = snapid ,key = beginKey,value = endKey,tableid = new byte[] { } };
+            var p = new Param() { snapid = snapid ,key = beginKey,value = endKey,tableid = tableid };
             NetMessage netMessage = NetMessage.Create("_db.snapshot.newiterator", p,id);
             return netMessage;
         }
@@ -115,6 +111,11 @@ namespace NEL.Simple.SDK
             NetMessage netMessage = NetMessage.Create("_db.iterator.next",p, id);
             return netMessage;
         }
+
+        public static bool PraseRecvMsg(NetMessage netMessage)
+        {
+            return netMessage.Param.result;
+        }
     }
 
     public static class Protocol_IteratorSeekToFirst
@@ -125,6 +126,10 @@ namespace NEL.Simple.SDK
             NetMessage netMessage = NetMessage.Create("_db.iterator.seektofirst",p ,id);
             return netMessage;
         }
+        public static bool PraseRecvMsg(NetMessage netMessage)
+        {
+            return netMessage.Param.result;
+        }
     }
 
     public static class Protocol_IteratorReset
@@ -134,6 +139,10 @@ namespace NEL.Simple.SDK
             var p = new Param() { itid = itid };
             NetMessage netMessage = NetMessage.Create("_db.iterator.reset", p,id);
             return netMessage;
+        }
+        public static bool PraseRecvMsg(NetMessage netMessage)
+        {
+            return netMessage.Param.result;
         }
     }
 
@@ -153,7 +162,7 @@ namespace NEL.Simple.SDK
             return msg.Param.value;
         }
     }
-
+    /*
     public static class Protocol_GetStorage
     {
         public class message
@@ -212,4 +221,5 @@ namespace NEL.Simple.SDK
             return netMessage.Param.value.AsSerializable<TransactionState>().Transaction;
         }
     }
+    */
 }

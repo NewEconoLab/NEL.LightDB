@@ -20,5 +20,14 @@ namespace NEL.Simple.SDK.Helper
                 return *((uint*)pbyte);
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe internal static ushort ToUInt16(this byte[] value, int startIndex)
+        {
+            fixed (byte* pbyte = &value[startIndex])
+            {
+                return *((ushort*)pbyte);
+            }
+        }
     }
 }

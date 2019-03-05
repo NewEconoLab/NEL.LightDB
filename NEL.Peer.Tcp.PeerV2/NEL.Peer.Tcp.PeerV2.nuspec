@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>NEL.Peer.Tcp.PeerV2</id>
+    <version>1.0.1</version>
+    <title>NEL.Peer.Tcp.PeerV2</title>
+    <authors>NEL</authors>
+    <owners>NEL</owners>
+    <licenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</licenseUrl>
+    <projectUrl>http://PROJECT_URL_HERE_OR_DELETE_THIS_LINE</projectUrl>
+    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>network module </description>
+    <releaseNotes>Summary of changes made in this release of the package.</releaseNotes>
+    <copyright>Copyright 2019</copyright>
+    <tags>nel peer tcp</tags>
+	<dependencies>
+      <dependency id="NEL.Common" version="1.0.1" />
+	  <dependency id="NEL.Peer.Tcp.Interface" version="1.0.1" />
+    </dependencies>
+  </metadata>
+</package>

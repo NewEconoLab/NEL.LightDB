@@ -51,19 +51,28 @@ namespace NEL.SimpleDB.Server
                     wb = StorageService.maindb.CreateWriteBatch();
                     curHeight++;
                 }
-                if (l.state == (byte)Neo.IO.Caching.TrackState.Added)
+                if (l.state == (byte)TrackState.Added)
                 {
+                    //Console.WriteLine(Neo.Helper.ToHexString(l.key?.Bytes));
                     wb.Put(l.tableid.ToBytes(),l.key?.Bytes,l.value?.Bytes);
                 }
-                else if (l.state == (byte)Neo.IO.Caching.TrackState.Deleted)
+                else if (l.state == (byte)TrackState.Deleted)
                 {
                     wb.Delete(l.tableid.ToBytes(),l.key?.Bytes);
                 }
-                else if (l.state == (byte)Neo.IO.Caching.TrackState.Changed)
+                else if (l.state == (byte)TrackState.Changed)
                 {
                     wb.Put(l.tableid.ToBytes(), l.key?.Bytes, l.value?.Bytes);
                 }
             }
         }
+    }
+
+    public enum TrackState : byte
+    {
+        None,
+        Added,
+        Changed,
+        Deleted
     }
 }
