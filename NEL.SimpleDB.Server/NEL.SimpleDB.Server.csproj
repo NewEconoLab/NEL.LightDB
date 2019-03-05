@@ -27,6 +27,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="C:\Users\viko\.nuget\packages\nel.simpledb\1.0.1\contentFiles\any\netstandard2.0\native\librocksdb-5.17.0.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="C:\Users\viko\.nuget\packages\nel.simpledb\1.0.1\contentFiles\any\netstandard2.0\native\libsnappy.so.1.1.5">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="C:\Users\viko\.nuget\packages\nel.simpledb\1.0.1\contentFiles\any\netstandard2.0\native\rocksdb-5.17.0.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
