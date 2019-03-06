@@ -10,29 +10,39 @@ namespace NEL.SimpleDB.Server
         private string conn;
         private string db;
         private string coll;
+        private int sleepTime;
 
         public RestoreTrack(Setting setting)
         {
             conn = setting.Conn_Track;
             db = setting.DataBase_Track;
             coll = setting.Coll_Track;
+            sleepTime = setting.SleepTime;
         }
 
         public void Start()
         {
-            var task = new Task(()=> 
+            var task = new Task(async()=> 
             {
                 while (true)
                 {
-                    //获取高度
-                    var curHeight = StorageService.maindb.UseSnapShot().DataHeight;
-                    //从mongo中获取data然后存入到本地
-                    var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll,"{height:{\"$gte\":"+ curHeight + ",\"$lte\":"+(curHeight + 10000)+"}}", "{height:1}");
-                    if (list.Count > 0)
+                    try
                     {
-                        Restore(curHeight, list);
+                        //获取高度
+                        var curHeight = StorageService.maindb.UseSnapShot().DataHeight;
+                        //从mongo中获取data然后存入到本地
+                        var list = MongoDBHelper.Get<TrackForMongodb>(conn, db, coll, "{height:{\"$gte\":" + curHeight + ",\"$lte\":" + (curHeight + 10000) + "}}", "{height:1}");
+                        if (list.Count > 0)
+                        {
+                            Restore(curHeight, list);
+                        }
+                        Console.WriteLine("height:" + curHeight + "    time:" + DateTime.UtcNow);
                     }
-                    Console.WriteLine("height:" + curHeight + "    time:" + DateTime.UtcNow);
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("error:"+e);
+                    }
+                    await Task.Delay(sleepTime);
                 }
             });
             task.Start();

@@ -13,6 +13,7 @@ namespace NEL.SimpleDB.Server
         public string Conn_Track { get; private set; }
         public string DataBase_Track { get; private set; }
         public string Coll_Track { get; private set; }
+        public int SleepTime { get; private set; }
 
         public Setting()
         {
@@ -23,6 +24,7 @@ namespace NEL.SimpleDB.Server
             Conn_Track = (string)json["Conn_Track"];
             DataBase_Track = (string)json["DataBase_Track"];
             Coll_Track = (string)json["Coll_Track"];
+            SleepTime = (int)json["sleepTime"];
         }
     }
 
