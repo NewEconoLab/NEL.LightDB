@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace NEL.Simple.SDK.Helper
+namespace NEL.Simple.SDK
 {
-    public class TrackForMongodb
+    public class MongodbOperation
     {
         public MongoDB.Bson.ObjectId _id { get; private set; }
         public byte tableid;
