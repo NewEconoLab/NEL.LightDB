@@ -1,4 +1,5 @@
 ﻿using MongoDB.Bson;
+using MongoDB.Bson.IO;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
 using System;
@@ -11,15 +12,19 @@ namespace NEL.Simple.SDK.Helper
     public static class MongoDBHelper
     {
         private static Dictionary<string, MongoClient> clientPool = new Dictionary<string, MongoClient>();
+
         private static MongoClient GetOrAdd(string mongodbConn)
         {
-            if (clientPool.ContainsKey(mongodbConn))
-                return clientPool[mongodbConn];
-            else
+            lock (clientPool)
             {
-                var client = new MongoClient(mongodbConn);
-                clientPool.Add(mongodbConn, client);
-                return client;
+                if (clientPool.ContainsKey(mongodbConn))
+                    return clientPool[mongodbConn];
+                else
+                {
+                    var client = new MongoClient(mongodbConn);
+                    clientPool.Add(mongodbConn, client);
+                    return client;
+                }
             }
         }
 
@@ -61,17 +66,51 @@ namespace NEL.Simple.SDK.Helper
             return coll.Find(findFliter).Skip(skipCount).Limit(limitCount).ToList();
         }
 
-        public static void ReplaceData<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, string whereFliter, T data)
+
+        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, string findFliter, string sortStr = "")
+        {
+            var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
+            var query = coll.Find(findFliter).ToList();
+            var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+            return JArray.Parse(query.ToJson(jsonWriterSettings));
+        }
+
+        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, int skipCount, int limitCount, string findFliter, string sortStr = "")
+        {
+            var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
+            var query =  coll.Find(findFliter).Skip(skipCount).Limit(limitCount).ToList();
+            var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+            return JArray.Parse(query.ToJson(jsonWriterSettings));
+        }
+
+        public static void ReplaceData(string mongodbConn, string mongodbDatabase, string mongodbColl, string whereFliter, BsonDocument data)
         {
             try
             {
-                var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<T>(mongodbColl);
-                if (coll.Find(whereFliter).ToList().Count == 0)
+                var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
+                if (coll.Find(BsonDocument.Parse(whereFliter)).ToList().Count == 0)
+                {
                     coll.InsertOne(data);
+                }
                 else
-                    coll.ReplaceOne(whereFliter, data);
+                {
+                    coll.ReplaceOne(BsonDocument.Parse(whereFliter), data);
+                }
             }
             catch(Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public static void DeleteData(string mongodbConn, string mongodbDatabase, string mongodbColl, string whereFliter)
+        {
+            try
+            {
+                var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
+                coll.DeleteMany(BsonDocument.Parse(whereFliter));
+            }
+            catch (Exception e)
             {
                 throw e;
             }
