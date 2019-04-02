@@ -83,18 +83,21 @@ namespace NEL.Simple.SDK.Helper
             return JArray.Parse(query.ToJson(jsonWriterSettings));
         }
 
-        public static void ReplaceData(string mongodbConn, string mongodbDatabase, string mongodbColl, string whereFliter, BsonDocument data)
+        public static void ReplaceData<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, string whereFliter, T data)
         {
             try
             {
                 var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
-                if (coll.Find(BsonDocument.Parse(whereFliter)).ToList().Count == 0)
+                List<BsonDocument> query = coll.Find(whereFliter).ToList();
+                if (query.Count == 0)//表示并没有数据
                 {
-                    coll.InsertOne(data);
+                    var collection2 = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<T>(mongodbColl);
+                    collection2.InsertOne(data);
                 }
                 else
                 {
-                    coll.ReplaceOne(BsonDocument.Parse(whereFliter), data);
+                    var collection2 = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<T>(mongodbColl);
+                    collection2.ReplaceOne(whereFliter, data);
                 }
             }
             catch(Exception e)
