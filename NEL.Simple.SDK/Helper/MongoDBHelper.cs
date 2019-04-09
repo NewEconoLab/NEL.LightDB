@@ -54,31 +54,31 @@ namespace NEL.Simple.SDK.Helper
             }
         }
 
-        public static List<T> Get<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, string findFliter,string sortStr = "")
+        public static List<T> Get<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, string findFliter,string sortStr = "{}")
         {
             var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<T>(mongodbColl);
-            return coll.Find(findFliter).ToList();
+            return coll.Find(findFliter).Sort(BsonDocument.Parse(sortStr)).ToList();
         }
 
-        public static List<T> Get<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, int skipCount, int limitCount, string findFliter, string sortStr = "")
+        public static List<T> Get<T>(string mongodbConn, string mongodbDatabase, string mongodbColl, int skipCount, int limitCount, string findFliter, string sortStr = "{}")
         {
             var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<T>(mongodbColl);
-            return coll.Find(findFliter).Skip(skipCount).Limit(limitCount).ToList();
+            return coll.Find(findFliter).Sort(BsonDocument.Parse(sortStr)).Skip(skipCount).Limit(limitCount).ToList();
         }
 
 
-        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, string findFliter, string sortStr = "")
+        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, string findFliter, string sortStr = "{}")
         {
             var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
-            var query = coll.Find(findFliter).ToList();
+            var query = coll.Find(findFliter).Sort(BsonDocument.Parse(sortStr)).ToList();
             var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
             return JArray.Parse(query.ToJson(jsonWriterSettings));
         }
 
-        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, int skipCount, int limitCount, string findFliter, string sortStr = "")
+        public static JArray Get(string mongodbConn, string mongodbDatabase, string mongodbColl, int skipCount, int limitCount, string findFliter, string sortStr = "{}")
         {
             var coll = GetOrAdd(mongodbConn).GetDatabase(mongodbDatabase).GetMongoCollection<BsonDocument>(mongodbColl);
-            var query =  coll.Find(findFliter).Skip(skipCount).Limit(limitCount).ToList();
+            var query =  coll.Find(findFliter).Sort(BsonDocument.Parse(sortStr)).Skip(skipCount).Limit(limitCount).ToList();
             var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
             return JArray.Parse(query.ToJson(jsonWriterSettings));
         }
